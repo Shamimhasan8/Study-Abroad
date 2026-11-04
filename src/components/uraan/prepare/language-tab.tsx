@@ -353,10 +353,20 @@ export function LanguageTab() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm text-muted-foreground">{t("lang.practiceEstimate")}</p>
-                    <Badge className="bg-primary text-primary-foreground">
-                      {feedback.estimatedLevel}
-                    </Badge>
+                    {feedback.estimatedLevel ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">{t("lang.practiceEstimate")}</p>
+                        <Badge className="bg-primary text-primary-foreground">
+                          {feedback.estimatedLevel}
+                        </Badge>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {lang === "bn"
+                          ? "স্তর অনুমান করা হয়নি — শব্দসংখ্যা থেকে দক্ষতার মান বোঝা যায় না।"
+                          : "No level estimated — word counts are not a proficiency measure."}
+                      </p>
+                    )}
                     {!feedback.aiGenerated && (
                       <Badge variant="outline" className="border-border text-muted-foreground">
                         {lang === "bn" ? "টেমপ্লেট ফিডব্যাক" : "Template feedback"}

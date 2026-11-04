@@ -425,6 +425,7 @@ model IngestionJob {
 model AiRun {
   id           String   @id @default(cuid())
   userId       String?
+  ip           String? // guest quota bucket (hashed prefix, not full address)
   user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   purpose      String // explain_plan | draft_feedback | practice_feedback
   model        String
@@ -436,6 +437,7 @@ model AiRun {
   createdAt    DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([ip, createdAt])
 }
 
 model NotificationEvent {

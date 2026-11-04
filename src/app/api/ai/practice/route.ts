@@ -3,6 +3,12 @@ import { practiceFeedback, templatePracticeFeedback } from "@/lib/ai/features";
 import { aiPracticeSchema, badRequest } from "@/lib/validation";
 
 /** Practice feedback — an honest estimate, never an official band score. */
+function clientIp(request: Request): string | undefined {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim().slice(0, 60) || undefined;
+  return undefined;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -15,6 +21,7 @@ export async function POST(request: Request) {
       prompt: "Describe a problem in your community and one realistic step to improve it. (120–180 words)",
       lang: parsed.data.lang,
       userId: user?.id,
+      ip: clientIp(request),
     });
     if (result.ok) {
       return Response.json({ ok: true, data: { feedback: result.feedback } });

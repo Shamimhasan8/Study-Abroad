@@ -3,6 +3,8 @@
  * Each feature degrades to a clearly-labelled template when the provider
  * is unavailable; canned text is never shown as live AI.
  */
+import { z } from "zod";
+import { extractJson } from "./provider";
 import type {
   EvaluationSummary,
   LanguageAbility,
@@ -22,8 +24,9 @@ export async function explainEvaluation(params: {
   opportunity: Opportunity;
   lang: "en" | "bn";
   userId?: string;
+  ip?: string;
 }): Promise<{ ok: true; explanation: string } | { ok: false; error: string }> {
-  const { profile, evaluation, opportunity, lang, userId } = params;
+  const { profile, evaluation, opportunity, lang, userId, ip } = params;
 
   // Non-identifying snapshot only: no name, email, or documents.
   const ruleLines = evaluation.results
@@ -54,7 +57,7 @@ export async function explainEvaluation(params: {
       : "Explain: (1) where the student stands overall, (2) which gaps matter first and why, (3) what must be confirmed with the institution, (4) one realistic next step. End with a single reminder that final decisions belong to institutions.",
   ].join("\n");
 
-  const result = await complete({ system, user, userId, purpose: "explain_plan" });
+  const result = await complete({ system, user, userId, ip, purpose: "explain_plan" });
   if (!result.ok) return { ok: false, error: result.error };
   return { ok: true, explanation: result.text.trim() };
 }
@@ -101,8 +104,9 @@ export async function draftFeedback(params: {
   profileFacts: string;
   lang: "en" | "bn";
   userId?: string;
+  ip?: string;
 }): Promise<{ ok: true; feedback: DraftFeedbackResult } | { ok: false; error: string }> {
-  const { kind, prompt, wordLimit, draft, profileFacts, lang, userId } = params;
+  const { kind, prompt, wordLimit, draft, profileFacts, lang, userId, ip } = params;
 
   const label =
     kind === "essay" ? "an undergraduate personal essay" : kind === "sop" ? "a graduate statement of purpose" : "a PhD research statement";
@@ -126,18 +130,22 @@ export async function draftFeedback(params: {
     .filter(Boolean)
     .join("\n");
 
-  const result = await complete({ system, user, userId, purpose: "draft_feedback", json: true });
+  const result = await complete({ system, user, userId, ip, purpose: "draft_feedback", json: true });
   if (!result.ok) return { ok: false, error: result.error };
-  return { ok: true, feedback: { ...JSON.parse(stripFence(result.text)), aiGenerated: true } };
+
+  // Strong output-schema validation: a malformed model reply fails safely
+  // (caller degrades to an honest error state) — it is never half-parsed.
+  const parsed = extractJson(result.text, draftFeedbackSchema.parse);
+  if (!parsed) return { ok: false, error: "malformed_model_output" };
+  return { ok: true, feedback: { ...parsed, aiGenerated: true } };
 }
 
-function stripFence(text: string): string {
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  return candidate.slice(start, end + 1);
-}
+const draftFeedbackSchema = z.object({
+  strengths: z.array(z.string().min(1).max(600)).min(0).max(6),
+  issues: z.array(z.string().min(1).max(600)).min(0).max(8),
+  suggestions: z.array(z.string().min(1).max(600)).min(0).max(8),
+  unsupportedClaims: z.array(z.string().min(1).max(600)).min(0).max(10),
+});
 
 // ---------- Language practice feedback ----------
 
@@ -146,10 +154,11 @@ export async function practiceFeedback(params: {
   prompt: string;
   lang: "en" | "bn";
   userId?: string;
+  ip?: string;
 }): Promise<
   { ok: true; feedback: PracticeFeedback } | { ok: false; error: string }
 > {
-  const { text, prompt, lang, userId } = params;
+  const { text, prompt, lang, userId, ip } = params;
   const system = [
     "You assess ONE short English practice paragraph for a Bangladeshi student. This is practice feedback — explicitly NOT an official IELTS/TOEFL score and never a promise of results.",
     'Reply ONLY with JSON: {"estimatedLevel": "beginner|intermediate|advanced", "strengths": string[2-3], "improvements": string[2-4], "note": string}',
@@ -159,27 +168,38 @@ export async function practiceFeedback(params: {
     lang === "bn" ? "মান ইংরেজিতে, ব্যাখ্যা পয়েন্টগুলো বাংলায় লিখুন।" : "Keep feedback short and kind."
   }`;
 
-  const result = await complete({ system, user, userId, purpose: "practice_feedback", json: true });
+  const result = await complete({ system, user, userId, ip, purpose: "practice_feedback", json: true });
   if (!result.ok) return { ok: false, error: result.error };
-  const parsed = JSON.parse(stripFence(result.text)) as PracticeFeedback;
+
+  const parsed = extractJson(result.text, practiceFeedbackSchema.parse);
+  if (!parsed) return { ok: false, error: "malformed_model_output" };
   return {
     ok: true,
     feedback: {
-      estimatedLevel: parsed.estimatedLevel ?? "intermediate",
-      strengths: parsed.strengths ?? [],
-      improvements: parsed.improvements ?? [],
-      note: parsed.note ?? "Practice feedback only — not an official score.",
+      estimatedLevel: parsed.estimatedLevel,
+      strengths: parsed.strengths,
+      improvements: parsed.improvements,
+      note: parsed.note,
       aiGenerated: true,
     },
   };
 }
 
+const practiceFeedbackSchema = z.object({
+  estimatedLevel: z.enum(["beginner", "intermediate", "advanced"]),
+  strengths: z.array(z.string().min(1).max(400)).min(0).max(5),
+  improvements: z.array(z.string().min(1).max(400)).min(0).max(6),
+  note: z.string().min(1).max(400),
+});
+
 export function templatePracticeFeedback(text: string): PracticeFeedback {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0).length;
-  const avgLen = sentences ? Math.round(words / sentences) : 0;
   return {
-    estimatedLevel: words >= 140 && avgLen <= 20 ? "intermediate–advanced" : "intermediate",
+    // Deliberately NO estimated level: word/sentence counts are text
+    // statistics, not a proficiency assessment. A level estimate comes
+    // only from the live model or an official test — never from here.
+    estimatedLevel: "",
     strengths: [
       words >= 100 ? "You wrote a full-length response — good stamina for timed writing." : "You put a complete idea on paper — the right starting point.",
       sentences >= 4 ? "Multiple sentences with varied structure." : "Clear single focus.",
@@ -189,7 +209,7 @@ export function templatePracticeFeedback(text: string): PracticeFeedback {
       "Add one concrete example to make your point vivid.",
       "Re-read for subject–verb agreement before finalizing.",
     ],
-    note: "Template feedback — the live practice-assessment service is unavailable. This is not a score and promises nothing.",
+    note: "Template structural feedback only — the live practice-assessment service is unavailable. This is not a score, and no proficiency level is estimated from word counts.",
     aiGenerated: false,
   };
 }

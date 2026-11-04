@@ -10,6 +10,12 @@ import type { ProfileData } from "@/lib/types";
  * Evidence-bound plan/gap explanation. The AI explains deterministic
  * results and never overrides them. Falls back to a labelled template.
  */
+function clientIp(request: Request): string | undefined {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim().slice(0, 60) || undefined;
+  return undefined;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -36,6 +42,7 @@ export async function POST(request: Request) {
       opportunity,
       lang,
       userId: user?.id,
+      ip: clientIp(request),
     });
 
     if (result.ok) {

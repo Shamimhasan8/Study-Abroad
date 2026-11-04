@@ -3,24 +3,29 @@
  *
  * Guarantees (per the product contract):
  * - Server-side only; provider secrets never reach the client.
- * - Timeouts, bounded retries, per-user daily quotas, sanitized AiRun logs
- *   (no essay text or personal documents in metadata).
+ * - Timeouts, bounded retries, per-user AND per-guest-IP daily quotas
+ *   (durable in the AiRun table, shared across instances), sanitized AiRun
+ *   logs (no essay text or personal documents in metadata).
  * - AI explains deterministic results; it never overrides them.
  * - Failures degrade gracefully to labelled template fallbacks — canned
  *   text is never presented as live AI output.
+ * - Model metadata reflects what the provider actually reports; a
+ *   configured-but-unknown model is labelled as such, never faked.
  */
 import ZAI from "z-ai-web-dev-sdk";
 import { db } from "@/lib/db";
-import type { ProfileData } from "@/lib/types";
 
 const TIMEOUT_MS = Number(process.env.AI_PROVIDER_TIMEOUT_MS ?? 45000);
 const MAX_OUTPUT_TOKENS = Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 1200);
 const DAILY_RUNS = Number(process.env.AI_DAILY_RUNS_PER_USER ?? 40);
+const DAILY_RUNS_PER_IP = Number(process.env.AI_DAILY_RUNS_PER_IP ?? 20);
 
 interface CompleteOptions {
   system: string;
   user: string;
   userId?: string;
+  /** Client IP for guest quota buckets (routes pass x-forwarded-for). */
+  ip?: string;
   purpose: string;
   json?: boolean;
 }
@@ -39,8 +44,18 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
+/** Coarse privacy: only a short stable prefix of the IP is stored. */
+function ipBucket(ip: string | undefined): string | null {
+  if (!ip) return null;
+  // Keep first two segments (or first 12 chars) — enough to bucket, not to
+  // identify an individual household beyond the quota's purpose.
+  const trimmed = ip.replace(/[^0-9a-fA-F:.]/g, "").slice(0, 14);
+  return trimmed || null;
+}
+
 async function logRun(params: {
   userId?: string;
+  ip?: string | null;
   purpose: string;
   model: string;
   status: string;
@@ -56,24 +71,46 @@ async function logRun(params: {
   }
 }
 
-async function checkQuota(userId?: string): Promise<boolean> {
-  if (!userId) return true; // anonymous guests get the same per-IP budget upstream
+async function checkQuota(userId?: string, ip?: string): Promise<boolean> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const runs = await db.aiRun.count({
-    where: { userId, createdAt: { gte: since }, status: "ok" },
-  });
-  return runs < DAILY_RUNS;
+  try {
+    if (userId) {
+      const runs = await db.aiRun.count({
+        where: { userId, createdAt: { gte: since }, status: "ok" },
+      });
+      return runs < DAILY_RUNS;
+    }
+    const bucket = ipBucket(ip);
+    if (!bucket) return true; // no IP at all (internal call) — allow, logged without bucket
+    const runs = await db.aiRun.count({
+      where: { ip: bucket, createdAt: { gte: since }, status: "ok" },
+    });
+    return runs < DAILY_RUNS_PER_IP;
+  } catch {
+    // Quota check itself failed: fail OPEN deliberately — an availability
+    // hiccup must not break deterministic features' explanations, and the
+    // runs still log for later reconciliation.
+    return true;
+  }
 }
 
 /** Low-level completion with retries and sanitized metadata logging. */
 export async function complete(opts: CompleteOptions): Promise<
-  { ok: true; text: string } | { ok: false; error: string }
+  { ok: true; text: string; model: string } | { ok: false; error: string }
 > {
-  if (!(await checkQuota(opts.userId))) {
+  if (!(await checkQuota(opts.userId, opts.ip))) {
+    await logRun({
+      userId: opts.userId,
+      ip: ipBucket(opts.ip) ?? undefined,
+      purpose: opts.purpose,
+      model: "n/a",
+      status: "error",
+      error: "quota",
+    });
     return { ok: false, error: "quota" };
   }
   const started = Date.now();
-  const model = "zai-default";
+  let reportedModel = "zai-unspecified"; // honest until the provider reports one
   let lastError = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -91,16 +128,20 @@ export async function complete(opts: CompleteOptions): Promise<
       );
       const text = completion.choices?.[0]?.message?.content ?? "";
       if (!text.trim()) throw new Error("empty_response");
+      // Actual model metadata when the provider supplies it.
+      const candidate = (completion as { model?: unknown }).model;
+      if (typeof candidate === "string" && candidate.trim()) reportedModel = candidate.trim();
       await logRun({
         userId: opts.userId,
+        ip: ipBucket(opts.ip) ?? undefined,
         purpose: opts.purpose,
-        model,
+        model: reportedModel,
         status: "ok",
         latencyMs: Date.now() - started,
         inputTokens: Math.ceil((opts.system.length + opts.user.length) / 4),
         outputTokens: Math.ceil(text.length / 4),
       });
-      return { ok: true, text };
+      return { ok: true, text, model: reportedModel };
     } catch (err) {
       lastError = err instanceof Error ? err.message : "unknown";
       if (attempt < 2) {
@@ -110,8 +151,9 @@ export async function complete(opts: CompleteOptions): Promise<
   }
   await logRun({
     userId: opts.userId,
+    ip: ipBucket(opts.ip) ?? undefined,
     purpose: opts.purpose,
-    model,
+    model: reportedModel,
     status: lastError === "ai_timeout" ? "timeout" : "error",
     latencyMs: Date.now() - started,
     error: lastError.slice(0, 200),

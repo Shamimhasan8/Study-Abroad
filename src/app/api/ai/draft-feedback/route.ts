@@ -9,6 +9,12 @@ import type { ProfileData } from "@/lib/types";
  * AI-use policy: when a draft is marked 'prohibited', feedback is
  * disabled for that draft instead of silently continuing.
  */
+function clientIp(request: Request): string | undefined {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim().slice(0, 60) || undefined;
+  return undefined;
+}
+
 export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
@@ -50,6 +56,7 @@ export async function POST(request: Request) {
       profileFacts,
       lang,
       userId: user.id,
+      ip: clientIp(request),
     });
 
     if (result.ok) return Response.json({ ok: true, data: { feedback: result.feedback } });
