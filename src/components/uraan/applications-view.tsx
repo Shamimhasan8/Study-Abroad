@@ -81,6 +81,12 @@ export function ApplicationsView() {
 
   const add = async () => {
     if (!slug.trim() || !title.trim()) return;
+    // Dedupe guard: never track the same opportunity twice.
+    if (applications.some((a) => a.opportunitySlug === slug.trim())) {
+      toast({ title: lang === "bn" ? "এই সুযোগটি আগেই ট্র্যাক করা আছে" : "This opportunity is already tracked" });
+      setDialogOpen(false);
+      return;
+    }
     const app = {
       opportunitySlug: slug.trim(),
       opportunityTitle: title.trim(),
