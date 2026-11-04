@@ -75,6 +75,7 @@ interface AppState {
 
   setGoal: (slug: string | null) => void;
   toggleShortlist: (slug: string) => void;
+  setShortlist: (slugs: string[]) => void;
 
   setApplications: (apps: ApplicationRecord[]) => void;
   upsertApplication: (app: ApplicationRecord) => void;
@@ -152,6 +153,8 @@ export const useAppStore = create<AppState>()(
             : [...current, slug],
         });
       },
+
+      setShortlist: (shortlist) => set({ shortlist }),
 
       setApplications: (applications) => set({ applications }),
 
