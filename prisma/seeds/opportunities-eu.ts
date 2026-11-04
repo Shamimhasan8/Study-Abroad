@@ -372,7 +372,7 @@ export const EU_OPPORTUNITIES: Opportunity[] = [
       "জার্মানিতে ডক্টরাল রিসার্চের জন্য DAAD গ্রান্ট: মাসিক ডক্টরাল স্টাইপেন্ড, ভ্রমণ ও বিমা। নির্বাচনে একাডেমিক মান, রিসার্চ প্রস্তাব ও সুপারভাইজার/প্রোগ্রাম ফিট ধরা হয়।",
     fundingType: "Doctoral stipend grant (competitive)",
     applyUrl: "https://www.daad.de/en/study-and-research-in-germany/scholarships/daad-funding-programmes/research-grants-doctoral-programmes/",
-    cycleYear: null,
+    cycleYear: undefined,
     cycleStatus: "rolling",
     deadlineNote:
       "Deadlines come from DAAD's country-specific deadline tables; for applicants from Bangladesh a table entry applies each year (historically in the autumn). Verify the current table on the DAAD page — do not infer from last year.",

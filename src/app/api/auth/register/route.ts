@@ -8,9 +8,10 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      const issue = parsed.error.issues[0]?.code;
+      const first = parsed.error.issues[0];
+      const field = first?.path?.[0];
       const message =
-        issue === "too_small" ? "weak_password" : issue === "invalid_string" ? "invalid_email" : "invalid_input";
+        field === "password" ? "weak_password" : field === "email" ? "invalid_email" : "invalid_input";
       return badRequest(message);
     }
     const { name, email, password } = parsed.data;

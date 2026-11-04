@@ -74,7 +74,6 @@ export interface IcsEvent {
   date: string; // ISO date-only
   summary: string;
   description?: string;
-  allDay: true; // date-only events are always all-day
 }
 
 /** Build an ICS calendar with all-day events — no times, no timezones. */

@@ -316,7 +316,7 @@ export const US_OPPORTUNITIES: Opportunity[] = [
       "বাংলাদেশি নাগরিকদের জন্য যুক্তরাষ্ট্রে মাস্টার্স বা পিএইচডি-র মার্কিন সরকারের প্রধান এক্সচেঞ্জ বৃত্তি: টিউশন, জীবিকা ভাতা, ভাড়া ও স্বাস্থ্য সুবিধা। প্রতিযোগিতামূলক, দেশভিত্তিক প্রক্রিয়া।",
     fundingType: "Full scholarship (tuition + stipend + airfare + health benefits)",
     applyUrl: "https://bd.usembassy.gov/education-culture/fulbright-foreign-student-program/",
-    cycleYear: null,
+    cycleYear: undefined,
     cycleStatus: "opens_later",
     deadlineNote:
       "The Bangladesh application window has historically run ~April–June each year, announced by U.S. Embassy Dhaka. Exact current-cycle dates must be confirmed from the Embassy's announcement — do not rely on last year's date.",

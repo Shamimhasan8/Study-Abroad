@@ -33,7 +33,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
       "স্নাতক পড়ার জন্য জাপান সরকারের (MEXT) বৃত্তি — এক বছরের জাপানি ভাষা প্রস্তুতিসহ। পুরো টিউশন, মাসিক স্টাইপেন্ড ও যাত্রার ভাড়া ঢাকে। বাংলাদেশি শিক্ষার্থীদের জন্য সম্পূর্ণ ফান্ডেড ব্যাচেলর পথগুলোর একটি।",
     fundingType: "Full government scholarship (tuition + stipend + airfare)",
     applyUrl: "https://www.studyinjapan.go.jp/en/smap-stopj-applications-undergraduate.html",
-    cycleYear: null,
+    cycleYear: undefined,
     cycleStatus: "opens_later",
     deadlineNote:
       "Embassy window in Bangladesh historically opens around April–June for the following year's batch. The Embassy of Japan in Dhaka publishes exact dates each year — confirm before relying on any date.",
@@ -172,7 +172,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
       "গ্র্যাজুয়েট রিসার্চ স্টুডেন্টদের জন্য জাপান সরকারের বৃত্তি — টিউশন, মাসিক স্টাইপেন্ড ও ভাড়া। প্লেসমেন্ট ও ডিগ্রিতে এগোনো বিশ্ববিদ্যালয়ের স্ক্রিনিংয়ের উপর নির্ভর করে — দুটোই পরিকল্পনা করুন।",
     fundingType: "Full government scholarship (tuition + stipend + airfare)",
     applyUrl: "https://www.studyinjapan.go.jp/en/smap-stopj-applications-research.html",
-    cycleYear: null,
+    cycleYear: undefined,
     cycleStatus: "opens_later",
     deadlineNote:
       "Same annual embassy window as the undergraduate track (historically ~April–June in Bangladesh). Field of study and research plan documents are part of the application. Confirm exact dates with the Embassy of Japan in Dhaka.",
