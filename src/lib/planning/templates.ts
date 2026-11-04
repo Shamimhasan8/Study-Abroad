@@ -1,0 +1,405 @@
+/**
+ * Uraan planning task templates.
+ *
+ * Back-planned from the target intake by `monthsBefore`. Templates are
+ * filtered by degree level, destination family, and profile facts. Only
+ * curated templates ship here — AI personalization happens later, within
+ * these validated constraints.
+ */
+import type { DegreeLevel, TaskCategory } from "@/lib/types";
+
+export interface TaskTemplate {
+  stableKey: string;
+  title: string;
+  titleBn: string;
+  purpose: string;
+  purposeBn: string;
+  category: TaskCategory;
+  effortHours: number;
+  monthsBefore: number; // negative = after intake planning
+  levels: DegreeLevel[];
+  countries?: string[]; // ISO-ish codes; omit for all
+  when?: "no_official_english_test" | "self_funded" | "research_route";
+}
+
+const BACHELOR: DegreeLevel[] = ["bachelor", "undecided"];
+const MASTER: DegreeLevel[] = ["master", "undecided"];
+const PHD: DegreeLevel[] = ["phd", "undecided"];
+const ANY_LEVEL: DegreeLevel[] = ["bachelor", "master", "phd", "undecided"];
+
+export const TASK_TEMPLATES: TaskTemplate[] = [
+  // ---------- Orientation (all levels) ----------
+  {
+    stableKey: "orient-routes",
+    title: "Understand your route and its true costs",
+    titleBn: "আপনার পথ ও তার আসল খরচ বুঝুন",
+    purpose: "Read the destination guide for your target country and the opportunity detail page. Write down what is covered by funding and what is not.",
+    purposeBn: "টার্গেট দেশের গাইড ও সুযোগের বিস্তারিত পাতা পড়ুন। কোথায় কী ফান্ডিং ঢাকে আর কী ঢাকে না — লিখে ফেলুন।",
+    category: "logistics",
+    effortHours: 3,
+    monthsBefore: 24,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "orient-deadline-verify",
+    title: "Verify current-cycle dates on official pages",
+    titleBn: "অফিসিয়াল পাতায় বর্তমান সাইকেলের তারিখ যাচাই করুন",
+    purpose: "Open the official application page of your target and record the exact current-cycle dates. Approximate windows in Uraan are planning aids, not deadlines.",
+    purposeBn: "টার্গেটের অফিসিয়াল আবেদন পাতা খুলে বর্তমান সাইকেলের সঠিক তারিখ লিখুন। উড়ানের আনুমানিক সময়সীমা পরিকল্পনার সহায়ক, ডেডলাইন নয়।",
+    category: "logistics",
+    effortHours: 2,
+    monthsBefore: 23,
+    levels: ANY_LEVEL,
+  },
+
+  // ---------- Language & tests (all levels) ----------
+  {
+    stableKey: "lang-self-check",
+    title: "Honest self-check of your English",
+    titleBn: "নিজের ইংরেজির সৎ মূল্যায়ন",
+    purpose: "Read one official sample task from an accepted test and rate yourself reading/writing/listening/speaking. Estimates only — they never count as scores.",
+    purposeBn: "গ্রহণযোগ্য একটি টেস্টের অফিসিয়াল নমুনা টাস্ক পড়ে রিডিং/রাইটিং/লিসেনিং/স্পিকিং নিজেকে মূল্যায়ন করুন। শুধুই অনুমান — স্কোর হিসেবে গোনে না।",
+    category: "language",
+    effortHours: 2,
+    monthsBefore: 22,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "test-choose-register",
+    title: "Choose your accepted test and register",
+    titleBn: "গ্রহণযোগ্য টেস্ট বেছে নিয়ে রেজিস্টার করুন",
+    purpose: "Pick a test your target accepts, book a date ~8–10 months before applications, and note the fee in your funding worksheet.",
+    purposeBn: "টার্গেট যে টেস্ট নেয় তা বেছে নিন, আবেদনের ~৮–১০ মাস আগের তারিখ বুক করুন, ফি ফান্ডিং ওয়ার্কশিটে লিখুন।",
+    category: "tests",
+    effortHours: 4,
+    monthsBefore: 20,
+    levels: ANY_LEVEL,
+    when: "no_official_english_test",
+  },
+  {
+    stableKey: "lang-weekly-practice",
+    title: "Weekly language study rhythm (log it)",
+    titleBn: "সাপ্তাহিক ভাষা চর্চার ছন্দ (লগ করুন)",
+    purpose: "Log study time weekly in Prepare → Language. Consistency beats cramming; the log shows your real trend.",
+    purposeBn: "প্রস্তুতি → ভাষায় প্রতি সপ্তাহে পড়ার সময় লগ করুন। নিয়মিত চর্চা রাত-জাগানো রিভিশনের চেয়ে ভালো; লগ আপনার আসল প্রবণতা দেখায়।",
+    category: "language",
+    effortHours: 60,
+    monthsBefore: 12,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "test-first-attempt",
+    title: "Take the test (first attempt)",
+    titleBn: "টেস্ট দিন (প্রথম প্রচেষ্টা)",
+    purpose: "Sit the booked test early enough to allow one retake window before application deadlines.",
+    purposeBn: "আবেদনের ডেডলাইনের আগে একবার রিটেকের সুযোগ রেখে বুক করা টেস্ট দিন।",
+    category: "tests",
+    effortHours: 6,
+    monthsBefore: 12,
+    levels: ANY_LEVEL,
+  },
+
+  // ---------- Experience (all levels) ----------
+  {
+    stableKey: "exp-journal-start",
+    title: "Start your experience journal",
+    titleBn: "অভিজ্ঞতার জার্নাল শুরু করুন",
+    purpose: "Record what you actually do — work, family duties, community help, projects. Depth and reflection matter; certificates don't.",
+    purposeBn: "আপনি আসলে কী করেন তা লিখুন — কাজ, পারিবারিক দায়িত্ব, কমিউনিটি, প্রজেক্ট। গভীরতা ও উপলব্ধি মূল্যবান; সার্টিফিকেট নয়।",
+    category: "experience",
+    effortHours: 12,
+    monthsBefore: 18,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "exp-one-project",
+    title: "Grow one genuine project",
+    titleBn: "একটি সত্যিকারের প্রজেক্ট বাড়ান",
+    purpose: "Pick ONE interest-aligned, feasible project (low-cost, fits your responsibilities) and pursue it over months. Journal it as it grows.",
+    purposeBn: "আগ্রহের সাথে মেলে এমন একটি সম্ভবপর প্রজেক্ট বাছুন (কম খরচ, দায়িত্বের সাথে মানানসই) আর মাসভর এগোন। বাড়ার সাথে সাথে জার্নালে লিখুন।",
+    category: "experience",
+    effortHours: 40,
+    monthsBefore: 12,
+    levels: ANY_LEVEL,
+  },
+
+  // ---------- Bachelor's track ----------
+  {
+    stableKey: "bach-major-fit",
+    title: "Map your subjects to possible majors",
+    titleBn: "আপনার বিষয়গুলোকে সম্ভাব্য মেজরের সাথে মেলান",
+    purpose: "List the fields your HSC subjects and interests support. Check each target programme's subject prerequisites on its official page.",
+    purposeBn: "HSC-র বিষয় ও আগ্রহ কোন কোন ফিল্ড সমর্থন করে তা লিখুন। প্রতিটি টার্গেট প্রোগ্রামের বিষয়-পূর্বশর্ত অফিসিয়াল পাতায় দেখুন।",
+    category: "academic",
+    effortHours: 4,
+    monthsBefore: 20,
+    levels: BACHELOR,
+  },
+  {
+    stableKey: "bach-shortlist",
+    title: "Shortlist universities with aid for internationals",
+    titleBn: "আন্তর্জাতিকদের জন্য এইডসহ বিশ্ববিদ্যালয় শর্টলিস্ট করুন",
+    purpose: "Build a 6–10 school list mixing ambition and safety; note each one's aid policy for internationals (some meet full need).",
+    purposeBn: "৬–১০টি স্কুলের তালিকা বানান — উচ্চাকাঙ্ক্ষা ও নিরাপত্তার মিশ্রণে; প্রতিটির আন্তর্জাতিক এইড নীতি লিখুন (কিছু প্রয়োজন পুরো মেটায়)।",
+    category: "logistics",
+    effortHours: 8,
+    monthsBefore: 16,
+    levels: BACHELOR,
+  },
+  {
+    stableKey: "bach-essay-cycle",
+    title: "Personal essay drafting cycle",
+    titleBn: "পার্সোনাল এসে লেখার চক্র",
+    purpose: "Draft your essay(s) in Prepare → Writing. Ground every claim in your own facts; get feedback; revise at least twice.",
+    purposeBn: "প্রস্তুতি → লেখায় এসে ড্রাফট করুন। প্রতিটি দাবি নিজের তথ্যে গড়ুন; ফিডব্যাক নিন; অন্তত দুইবার সংশোধন করুন।",
+    category: "writing",
+    effortHours: 24,
+    monthsBefore: 7,
+    levels: BACHELOR,
+  },
+  {
+    stableKey: "bach-teacher-recs",
+    title: "Ask teachers for recommendations",
+    titleBn: "শিক্ষকদের রেকমেন্ডেশনের অনুরোধ করুন",
+    purpose: "Choose 1–2 teachers who know your work concretely. Ask early, share a factual briefing packet, and track their status in Prepare → Recommenders.",
+    purposeBn: "আপনার কাজ জানেন এমন ১–২ জন শিক্ষক বাছুন। আগে অনুরোধ করুন, তথ্যভিত্তিক ব্রিফিং দিন, প্রস্তুতি → রেকমেন্ডারে অবস্থা ট্র্যাক করুন।",
+    category: "recommenders",
+    effortHours: 6,
+    monthsBefore: 6,
+    levels: BACHELOR,
+  },
+  {
+    stableKey: "bach-aid-forms",
+    title: "Complete financial aid forms (CSS Profile / ISFAA)",
+    titleBn: "আর্থিক এইড ফর্ম পূরণ করুন (CSS Profile / ISFAA)",
+    purpose: "Fill the aid forms your shortlisted universities require for internationals, with honest family figures. Errors here cost aid.",
+    purposeBn: "শর্টলিস্টের বিশ্ববিদ্যালয় আন্তর্জাতিকদের যে এইড ফর্ম চায় তা পরিবারের সৎ সংখ্যাসহ পূরণ করুন। ভুল মানে এইড হারানো।",
+    category: "funding",
+    effortHours: 10,
+    monthsBefore: 5,
+    levels: BACHELOR,
+  },
+
+  // ---------- Master's track ----------
+  {
+    stableKey: "master-route-decision",
+    title: "Choose professional vs research master's route",
+    titleBn: "পেশাদার বনাম রিসার্চ মাস্টার্স পথ বেছে নিন",
+    purpose: "Decide whether your goal is a coursework/professional programme or a research-track that can lead toward PhD. It changes SOP, references, and funding.",
+    purposeBn: "লক্ষ্য কোর্সওয়ার্ক/পেশাদার প্রোগ্রাম নাকি পিএইচডির দিকে নেওয়া রিসার্চ-ট্র্যাক — ঠিক করুন। এতে SOP, রেফারেন্স ও ফান্ডিং বদলায়।",
+    category: "academic",
+    effortHours: 3,
+    monthsBefore: 20,
+    levels: MASTER,
+  },
+  {
+    stableKey: "master-programme-shortlist",
+    title: "Shortlist programmes by curriculum and funding",
+    titleBn: "কারিকুলাম ও ফান্ডিং অনুযায়ী প্রোগ্রাম শর্টলিস্ট",
+    purpose: "Compare 6–10 programmes on curriculum fit, total cost, and funding reality (assistantships vs none). Use Compare to keep fields honest.",
+    purposeBn: "৬–১০টি প্রোগ্রাম তুলনা করুন — কারিকুলাম ফিট, মোট খরচ ও ফান্ডিং বাস্তবতায় (assistantship আছে/নেই)। তুলনা ভিউ ব্যবহার করুন।",
+    category: "logistics",
+    effortHours: 10,
+    monthsBefore: 16,
+    levels: MASTER,
+  },
+  {
+    stableKey: "master-sop-cycle",
+    title: "Statement of purpose drafting cycle",
+    titleBn: "স্টেটমেন্ট অফ পারপাস লেখার চক্র",
+    purpose: "Write your SOP in Prepare → Writing: motivation with evidence, fit with THIS programme, and realistic goals. Feedback → revise twice.",
+    purposeBn: "প্রস্তুতি → লেখায় SOP লিখুন: প্রমাণসহ অনুপ্রেরণা, এই প্রোগ্রামের সাথে ফিট, বাস্তবসম্মত লক্ষ্য। ফিডব্যাক নিয়ে দুইবার সংশোধন।",
+    category: "writing",
+    effortHours: 24,
+    monthsBefore: 7,
+    levels: MASTER,
+  },
+  {
+    stableKey: "master-references",
+    title: "Line up academic/professional references",
+    titleBn: "একাডেমিক/পেশাদার রেফারেন্স ঠিক করুন",
+    purpose: "Pick referees who can speak to concrete work (thesis, projects, employment). Brief them factually; track status honestly.",
+    purposeBn: "যাঁরা মূর্ত কাজ নিয়ে বলতে পারেন (থিসিস, প্রজেক্ট, চাকরি) তাঁদের বাছুন। তথ্য দিয়ে ব্রিফ করুন; অবস্থা সৎভাবে ট্র্যাক করুন।",
+    category: "recommenders",
+    effortHours: 6,
+    monthsBefore: 6,
+    levels: MASTER,
+  },
+  {
+    stableKey: "master-transcripts-cv",
+    title: "Prepare transcripts and CV",
+    titleBn: "ট্রান্সক্রিপ্ট ও CV প্রস্তুত করুন",
+    purpose: "Collect official transcripts and build a one–two page CV of genuine experience. Never inflate — verification exists.",
+    purposeBn: "অফিসিয়াল ট্রান্সক্রিপ্ট সংগ্রহ করুন আর সত্যিকারের অভিজ্ঞতার ১–২ পাতার CV বানান। বাড়িয়ে বলা নয় — যাচাই হয়।",
+    category: "documents",
+    effortHours: 8,
+    monthsBefore: 5,
+    levels: MASTER,
+  },
+
+  // ---------- PhD track ----------
+  {
+    stableKey: "phd-interest-statement",
+    title: "Write your research-interest statement",
+    titleBn: "রিসার্চ-আগ্রহের বিবৃতি লিখুন",
+    purpose: "Articulate the questions that genuinely pull you in Prepare → Research. Everything else (fit, proposal, outreach) grows from this.",
+    purposeBn: "প্রস্তুতি → রিসার্চে যে প্রশ্নগুলো আপনাকে টানে তা স্পষ্ট করুন। ফিট, প্রস্তাব, আউটরিচ — সব এখান থেকে জন্মায়।",
+    category: "research",
+    effortHours: 8,
+    monthsBefore: 22,
+    levels: PHD,
+  },
+  {
+    stableKey: "phd-reading-log",
+    title: "Build a weekly reading log",
+    titleBn: "সাপ্তাহিক পড়ার লগ গড়ুন",
+    purpose: "Read 1–2 papers or group pages weekly in your interest area; note your takeaway. After months this becomes genuine depth.",
+    purposeBn: "আগ্রহের ক্ষেত্রে সাপ্তাহে ১–২টি পেপার/গ্রুপ পাতা পড়ুন; শেখা লিখুন। মাস পেরোলে এটাই সত্যিকারের গভীরতা।",
+    category: "research",
+    effortHours: 50,
+    monthsBefore: 14,
+    levels: PHD,
+  },
+  {
+    stableKey: "phd-faculty-fit",
+    title: "Faculty/lab fit worksheet",
+    titleBn: "ফ্যাকাল্টি/ল্যাব ফিট ওয়ার্কশিট",
+    purpose: "List 8–12 groups whose current work overlaps your interests. Faculty availability/funding only from current official listings — unconfirmed stays unconfirmed.",
+    purposeBn: "আপনার আগ্রহের সাথে মেলে এমন ৮–১২টি গ্রুপ লিখুন। ফ্যাকাল্টির প্রাপ্যতা/ফান্ডিং শুধু বর্তমান অফিসিয়াল তালিকা থেকে — অনিশ্চিত অনিশ্চিতই থাকে।",
+    category: "research",
+    effortHours: 16,
+    monthsBefore: 12,
+    levels: PHD,
+  },
+  {
+    stableKey: "phd-proposal",
+    title: "Research proposal / writing sample",
+    titleBn: "রিসার্চ প্রস্তাব / রাইটিং স্যাম্পল",
+    purpose: "Draft the proposal or writing sample your target requires, grounded in your reading log. Get feedback; revise twice.",
+    purposeBn: "টার্গেট যা চায় (প্রস্তাব/নমুনা) পড়ার লগের ভিত্তিতে লিখুন। ফিডব্যাক নিন; দুইবার সংশোধন।",
+    category: "research",
+    effortHours: 40,
+    monthsBefore: 8,
+    levels: PHD,
+  },
+  {
+    stableKey: "phd-outreach",
+    title: "Review outreach drafts (you send, never us)",
+    titleBn: "আউটরিচ ড্রাফট যাচাই করুন (পাঠান আপনি, আমরা নই)",
+    purpose: "Draft short, honest notes to 2–4 best-fit faculty. Sending is always your action; advertised positions differ from programme admissions — check both.",
+    purposeBn: "সেরা ফিটের ২–৪ জন ফ্যাকাল্টিকে ছোট, সৎ নোট ড্রাফট করুন। পাঠানো সবসময় আপনার কাজ; বিজ্ঞাপিত পদ আর প্রোগ্রাম ভর্তি আলাদা — দুটোই দেখুন।",
+    category: "research",
+    effortHours: 8,
+    monthsBefore: 7,
+    levels: PHD,
+  },
+  {
+    stableKey: "phd-refs",
+    title: "Research references",
+    titleBn: "রিসার্চ রেফারেন্স",
+    purpose: "Choose referees who know your academic/research work concretely; brief them with your interest statement and proposal summary.",
+    purposeBn: "আপনার একাডেমিক/রিসার্চ কাজ জানেন এমন রেফারি বাছুন; আগ্রহের বিবৃতি ও প্রস্তাবের সারমর্ম দিয়ে ব্রিফ করুন।",
+    category: "recommenders",
+    effortHours: 6,
+    monthsBefore: 6,
+    levels: PHD,
+  },
+
+  // ---------- Funding (all levels) ----------
+  {
+    stableKey: "fund-worksheet",
+    title: "Fill the funding-gap worksheet",
+    titleBn: "ফান্ডিং-গ্যাপ ওয়ার্কশিট পূরণ করুন",
+    purpose: "Compare documented costs with your family contribution and upfront funds. Keep unknowns visible; competitive awards are not guaranteed income.",
+    purposeBn: "ডকুমেন্টেড খরচ বনাম পারিবারিক সহায়তা ও হাতের অর্থ মিলান। অজানা দৃশ্যমান রাখুন; প্রতিযোগিতামূলক অ্যাওয়ার্ড নিশ্চিত আয় নয়।",
+    category: "funding",
+    effortHours: 4,
+    monthsBefore: 14,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "fund-upfront-plan",
+    title: "Plan upfront cash needs",
+    titleBn: "শুরুর নগদ প্রয়োজন পরিকল্পনা করুন",
+    purpose: "List one-time costs (test fees, application fees, deposits, travel, visa) and check them against available upfront funds — not yearly figures.",
+    purposeBn: "এককালীন খরচ (টেস্ট ফি, আবেদন ফি, ডিপোজিট, ভ্রমণ, ভিসা) লিখুন আর হাতের নগদের সাথে মেলান — বার্ষিক সংখ্যা নয়।",
+    category: "funding",
+    effortHours: 3,
+    monthsBefore: 8,
+    levels: ANY_LEVEL,
+    when: "self_funded",
+  },
+
+  // ---------- Documents & application (all levels) ----------
+  {
+    stableKey: "docs-collect",
+    title: "Collect application documents",
+    titleBn: "আবেদনের ডকুমেন্ট সংগ্রহ করুন",
+    purpose: "Gather transcripts, certificates, test scores, passport copy as needed. Store privately in Prepare → Documents (only you can open them).",
+    purposeBn: "ট্রান্সক্রিপ্ট, সনদ, টেস্ট স্কোর, প্রয়োজনে পাসপোর্ট কপি জমা করুন। প্রস্তুতি → ডকুমেন্টে প্রাইভেটলি রাখুন (শুধু আপনি খুলতে পারবেন)।",
+    category: "documents",
+    effortHours: 6,
+    monthsBefore: 5,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "app-submit-window",
+    title: "Submit applications in the official channel",
+    titleBn: "অফিসিয়াল চ্যানেলে আবেদন জমা দিন",
+    purpose: "Submit through each institution's real official system — never through Uraan. Track the self-reported status in Applications.",
+    purposeBn: "প্রতিষ্ঠানের আসল অফিসিয়াল সিস্টেমে জমা দিন — কখনোই উড়ানের মাধ্যমে নয়। আবেদনসমূহে নিজ-রিপোর্টেড অবস্থা ট্র্যাক করুন।",
+    category: "logistics",
+    effortHours: 12,
+    monthsBefore: 4,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "app-interview-prep",
+    title: "Interview practice (where required)",
+    titleBn: "ইন্টারভিউ অনুশীলন (যেখানে লাগে)",
+    purpose: "Practice speaking about your story, goals, and fit out loud. Embassy/department interviews reward clarity and honesty, not memorized scripts.",
+    purposeBn: "নিজের গল্প, লক্ষ্য ও ফিট নিয়ে জোরে বলার অনুশীলন করুন। দূতাবাস/ডিপার্টমেন্ট ইন্টারভিউয়ে স্পষ্টতা ও সততা ধরা হয়, মুখস্থ নয়।",
+    category: "logistics",
+    effortHours: 8,
+    monthsBefore: 3,
+    levels: ANY_LEVEL,
+  },
+  {
+    stableKey: "visa-funds-prep",
+    title: "Visa and funds preparation (after decisions)",
+    titleBn: "ভিসা ও অর্থের প্রস্তুতি (সিদ্ধান্তের পরে)",
+    purpose: "Once admitted: study the official visa requirements of your destination and arrange financial evidence exactly as the embassy specifies.",
+    purposeBn: "ভর্তি হলে: গন্তব্যের অফিসিয়াল ভিসা শর্ত পড়ুন আর দূতাবাস যেভাবে চায় ঠিক সেভাবে আর্থিক প্রমাণ সাজান।",
+    category: "logistics",
+    effortHours: 10,
+    monthsBefore: 2,
+    levels: ANY_LEVEL,
+  },
+
+  // ---------- Destination-conditional ----------
+  {
+    stableKey: "jp-basics-optional",
+    title: "Everyday Japanese basics (optional)",
+    titleBn: "দৈনন্দিন জাপানি বেসিক (ঐচ্ছিক)",
+    purpose: "For Japan routes: friendly daily-life Japanese eases settling in. It is not an admission requirement for English/MEXT tracks.",
+    purposeBn: "জাপান পথের জন্য: দৈনন্দিন জাপানি জীবন সহজ করে। ইংরেজি/MEXT ট্র্যাকে এটি ভর্তির শর্ত নয়।",
+    category: "language",
+    effortHours: 30,
+    monthsBefore: 10,
+    levels: ANY_LEVEL,
+    countries: ["JP"],
+  },
+  {
+    stableKey: "de-blocked-account",
+    title: "Plan the blocked account (self-funded Germany)",
+    titleBn: "ব্লক অ্যাকাউন্ট পরিকল্পনা (স্ব-অর্থায়িত জার্মানি)",
+    purpose: "For self-funded German routes: the blocked account rate is set annually — check the current figure on official pages and plan the deposit timeline.",
+    purposeBn: "স্ব-অর্থায়িত জার্মান পথে: ব্লক অ্যাকাউন্টের হার প্রতি বছর বদলায় — অফিসিয়াল পাতায় বর্তমান পরিসংখ্যান দেখে জমার সময়রেখা সাজান।",
+    category: "funding",
+    effortHours: 4,
+    monthsBefore: 6,
+    levels: ANY_LEVEL,
+    countries: ["DE"],
+    when: "self_funded",
+  },
+];
