@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MilestonePath, PaperPlaneFlight } from "./illustrations";
 import { PHASE_LABELS, phaseOfTask } from "@/lib/planning/engine";
 import { deadlineLabel } from "@/lib/dates";
-import type { EvaluationSummary, Opportunity } from "@/lib/types";
+import type { EvaluationSummary, NotificationItem, Opportunity } from "@/lib/types";
 import {
   Map, Target, CalendarClock, ClipboardList, Sparkles, Loader2, CircleCheck, CircleX, CircleHelp, ShieldQuestion,
 } from "lucide-react";
@@ -34,6 +34,23 @@ export function JourneyView() {
   const [explanation, setExplanation] = useState<{ text: string; aiGenerated: boolean } | null>(null);
   const [fly, setFly] = useState(false);
   const [preview, setPreview] = useState<{ requiresConfirmation: boolean; plan: typeof plan } | null>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/notifications");
+        const json = await res.json();
+        if (json.ok) setNotifications(json.data.notifications ?? []);
+      } catch {
+        /* offline — show nothing rather than stale data */
+      }
+    })();
+  }, [user]);
 
   useEffect(() => {
     if (!goalSlug) {
@@ -379,15 +396,33 @@ export function JourneyView() {
           </CardContent>
         </Card>
 
-        {/* Recent changes */}
+        {/* Recent changes (real notifications when signed in) */}
         <Card className="border-border/70 bg-card">
           <CardContent className="p-5">
             <h2 className="mb-3 text-base font-semibold tracking-tight">{t("journey.changes")}</h2>
-            <p className="text-sm text-muted-foreground">
-              {lang === "bn"
-                ? "কোনো সূত্র পরিবর্তন এখনো জানানো হয়নি। প্রকাশিত পরিবর্তন এখানে দেখা যাবে।"
-                : "No source changes notified yet. Published changes to your target will appear here."}
-            </p>
+            {!user ? (
+              <p className="text-sm text-muted-foreground">
+                {lang === "bn"
+                  ? "কোনো সূত্র পরিবর্তন এখনো জানানো হয়নি। অ্যাকাউন্টে সাইন-ইন করলে প্রকাশিত পরিবর্তন এখানে দেখা যাবে।"
+                  : "No source changes notified yet. Sign in to see published changes to your target here."}
+              </p>
+            ) : notifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {lang === "bn"
+                  ? "কোনো সূত্র পরিবর্তন এখনো জানানো হয়নি। প্রকাশিত পরিবর্তন এখানে দেখা যাবে।"
+                  : "No source changes notified yet. Published changes to your target will appear here."}
+              </p>
+            ) : (
+              <ul className="max-h-48 overflow-y-auto uraan-scroll flex flex-col gap-2">
+                {notifications.map((n) => (
+                  <li key={n.id} className="rounded-lg border border-border/70 p-2.5">
+                    <p className="text-sm font-medium leading-snug">{n.title}</p>
+                    {n.body && <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{n.body}</p>}
+                    <p className="mt-1 text-[10px] text-muted-foreground/70">{n.createdAt.slice(0, 16).replace("T", " ")}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
