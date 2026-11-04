@@ -1,7 +1,22 @@
 /**
- * Uraan matching engine — deterministic requirement evaluator.
+ * Uraan matching engine — deterministic requirement evaluator. v2
  *
  * Contract: AI can explain these results; it can never override them.
+ * Audited repairs in v2 (see docs/REPAIR_AUDIT.md):
+ * - No null/NaN score may satisfy a threshold (was: `meets !== false`).
+ * - Test matching uses normalized test FAMILIES, not substring hits on
+ *   words like "English".
+ * - Qualification completion honours completed vs expected; a label
+ *   containing "bachelor" is never read as a completed degree by itself.
+ * - Diploma equivalence is route-specific -> institution confirmation,
+ *   never an automatic 12-year pass.
+ * - 3-year bachelor's is not universally rejected: route-specific
+ *   confirmation instead of a hard not_met.
+ * - Age rules with day-level cutoffs are resolved only when the birth
+ *   year proves the outcome in both birthday scenarios; otherwise
+ *   needs_information (never a confident "fits").
+ * - Optional/conditional rules never become hard gates; their misses are
+ *   reported separately from blocking gaps.
  * Unknown operator or missing input → needs_information /
  * needs_institution_confirmation — NEVER an automatic pass.
  */
@@ -15,17 +30,14 @@ import type {
   RuleResult,
 } from "@/lib/types";
 
-export const ENGINE_VERSION = "matching-1.0.0";
+export const ENGINE_VERSION = "matching-2.0.0";
 
-// ---------- Education-year mapping (documented, factual) ----------
-// Counts years of formal education by qualification level. This is NOT a
-// grade conversion — grades stay exactly as reported everywhere else.
+// ---------- Education duration (reported years; NOT credential recognition) ----------
 const EDUCATION_YEARS: Record<string, number> = {
   "ssc": 10,
   "o-level": 10,
   "hsc": 12,
   "a-level": 12,
-  "diploma": 12,
   "ib-diploma": 12,
   "bachelor-3y": 15,
   "bachelor-4y": 16,
@@ -35,16 +47,20 @@ const EDUCATION_YEARS: Record<string, number> = {
   "master-2y": 18,
 };
 
+/** Completed/expected/unknown — driven by explicit fields, never labels. */
+function qualificationStatus(q: Qualification): "completed" | "expected" | "unknown" {
+  if (q.expectedYear && q.expectedYear.trim()) return "expected";
+  if (q.year && q.year.trim()) return "completed";
+  return "unknown";
+}
+
 export function qualificationYears(q: Qualification): number | null {
-  if (q.level === "hsc" || q.level === "ssc") return EDUCATION_YEARS[q.level] ?? null;
+  // Duration as reported. "diploma" is deliberately absent: its years vary
+  // by system (Bangladesh diploma ≠ universally 12 years) — unknown, not guessed.
   const key = q.level.toLowerCase().replace(/\s+/g, "-");
-  if (EDUCATION_YEARS[key] !== undefined) return EDUCATION_YEARS[key];
-  // Fuzzy contains checks for common labels
-  if (/bachelor/.test(key)) return /pass|3[- ]year|3y/.test(key) ? 15 : 16;
-  if (/master/.test(key)) return 17;
-  if (/hsc|a[- ]level|diploma|ib/.test(key)) return 12;
-  if (/ssc|o[- ]level/.test(key)) return 10;
-  return null; // unrecognized → needs_information
+  if (key === "ssc" || key === "hsc") return EDUCATION_YEARS[key] ?? null;
+  if (key === "diploma") return null;
+  return EDUCATION_YEARS[key] ?? null;
 }
 
 export function highestEducationYears(profile: ProfileData): number | null {
@@ -56,39 +72,129 @@ export function highestEducationYears(profile: ProfileData): number | null {
   return best;
 }
 
-function hasCompletedBachelor(profile: ProfileData): boolean | null {
-  let saw3y = false;
+/**
+ * Bachelor's-level standing. Returns a tagged state so callers can be
+ * honest about "in progress" vs "route-specific recognition".
+ */
+export type BachelorStanding =
+  | { kind: "met"; why: string }
+  | { kind: "expected" }
+  | { kind: "three_year" }
+  | { kind: "master_met"; why: string }
+  | { kind: "unknown" };
+
+function bachelorStanding(profile: ProfileData): BachelorStanding {
   for (const q of profile.qualifications) {
-    if (/master/i.test(q.level)) return true;
-    if (/bachelor/i.test(q.level)) {
-      if (/pass|3[- ]year|3y/i.test(q.level)) {
-        saw3y = true;
-      } else {
-        return true; // 4-year honours recognized as bachelor's completion
+    const key = q.level.toLowerCase().replace(/\s+/g, "-");
+    const status = qualificationStatus(q);
+    if (/master/.test(key)) {
+      if (status === "completed") return { kind: "master_met", why: q.level };
+      if (status === "expected") return { kind: "expected" };
+      // master with unclear status → fall through to bachelor checks
+    }
+    if (/bachelor|bsc|ba\b|beng|btech/.test(key)) {
+      if (status === "expected") return { kind: "expected" };
+      if (status === "completed") {
+        if (/pass|3[- ]year|3y/.test(key)) return { kind: "three_year" };
+        return { kind: "met", why: q.level };
       }
     }
   }
-  return saw3y ? false : null; // 3-year pass → not_met for 16-year routes; null = unknown
+  return { kind: "unknown" };
 }
 
-function hasCompletedMaster(profile: ProfileData): boolean | null {
-  for (const q of profile.qualifications) {
-    if (/master/i.test(q.level)) return true;
+// ---------- Test families ----------
+
+/** Canonical test families; matching is family-to-family, never substring. */
+const TEST_FAMILY_ALIASES: Record<string, string[]> = {
+  ielts: ["ielts"],
+  toefl: ["toefl", "ibt", "toeflibt"],
+  pte: ["pteacademic", "pte"],
+  duolingo: ["duolingo", "duolingoenglishtest", "det"],
+  cambridge: ["cambridgeenglish", "cae", "cpe", "cambridge", "advanced"],
+  gre: ["gre"],
+  gmat: ["gmat"],
+  sat: ["sat"],
+  act: ["act"],
+  jlpt: ["jlpt"],
+  testdaf: ["testdaf"],
+  dsh: ["dsh"],
+  jtest: ["jtest"],
+  nat: ["nat"],
+  eju: ["eju"],
+};
+
+export function testFamilyOf(name: string): string | null {
+  const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  for (const [family, aliases] of Object.entries(TEST_FAMILY_ALIASES)) {
+    if (aliases.some((alias) => normalized.includes(alias))) return family;
   }
-  const bachelor = hasCompletedBachelor(profile);
-  if (bachelor === true) return false;
   return null;
 }
 
-function findTest(tests: OfficialTestResult[], name: string): OfficialTestResult | undefined {
-  return tests.find((t) => t.testType.toLowerCase().includes(name.toLowerCase()));
+/** Valid score ranges per family — out-of-range scores stay unknown. */
+const SCORE_RANGES: Record<string, [number, number]> = {
+  ielts: [0, 9],
+  toefl: [0, 120],
+  pte: [10, 90],
+  duolingo: [10, 160],
+  cambridge: [80, 230],
+  gre: [130, 340],
+  gmat: [200, 800],
+  sat: [400, 1600],
+  act: [1, 36],
+};
+
+const VALIDITY_MONTHS: Record<string, number> = {
+  // Common published validity windows (guidance level; the official page
+  // of the receiving institution remains authoritative).
+  ielts: 24,
+  toefl: 24,
+  pte: 24,
+  duolingo: 24,
+  cambridge: 36,
+  gre: 60,
+  gmat: 60,
+};
+
+export function parseScore(score: string): number | null {
+  const trimmed = score.trim();
+  const match = /(\d+(?:\.\d+)?)/.exec(trimmed);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : null;
 }
 
-function scoreMeets(userScore: string, threshold: string): boolean | null {
-  const user = parseFloat(userScore);
-  const min = parseFloat(threshold);
-  if (Number.isNaN(user) || Number.isNaN(min)) return null;
-  return user >= min;
+export function scoreInFamilyRange(family: string, value: number): boolean {
+  const range = SCORE_RANGES[family];
+  if (!range) return true; // families without a known scale are not auto-failed
+  return value >= range[0] && value <= range[1];
+}
+
+export function testIsStale(test: OfficialTestResult, at: Date = new Date()): boolean {
+  const family = testFamilyOf(test.testType);
+  const months = family ? VALIDITY_MONTHS[family] : undefined;
+  if (!months || !test.date) return false;
+  const taken = new Date(test.date);
+  if (Number.isNaN(taken.getTime())) return false;
+  return at.getTime() - taken.getTime() > months * 30.44 * 24 * 3600 * 1000;
+}
+
+function findFamilyTest(
+  tests: OfficialTestResult[],
+  family: string,
+): OfficialTestResult | undefined {
+  return tests.find((t) => testFamilyOf(t.testType) === family);
+}
+
+// ---------- Language evaluation ----------
+
+interface TestLine {
+  test: string;
+  family: string;
+  score: string;
+  min: number;
+  status: "meets" | "below" | "unknown_score" | "stale";
 }
 
 function evaluateLanguageTests(rule: RequirementRule, profile: ProfileData): {
@@ -104,53 +210,78 @@ function evaluateLanguageTests(rule: RequirementRule, profile: ProfileData): {
   if (Object.keys(thresholds).length === 0) {
     return { result: "needs_institution_confirmation", detail: rule.detail };
   }
-  // Any non-numeric threshold means the official numbers must be confirmed.
-  const numeric: Record<string, number> = {};
-  for (const [test, min] of Object.entries(thresholds)) {
-    const value = parseFloat(min);
-    if (Number.isNaN(value)) {
-      return {
-        result: "needs_institution_confirmation",
-        detail: `${rule.detail} — accepted tests/scores for the current cycle need confirmation on the official page.`,
-      };
+
+  const lines: TestLine[] = [];
+  const unresolvable: string[] = [];
+  for (const [testLabel, minValueRaw] of Object.entries(thresholds)) {
+    const family = testFamilyOf(testLabel);
+    const min = parseScore(String(minValueRaw));
+    if (!family || min === null) {
+      // Threshold we cannot normalize or a non-numeric cutoff: the
+      // official numbers must be confirmed, not guessed.
+      unresolvable.push(testLabel);
+      continue;
     }
-    numeric[test] = value;
-  }
-  const matching: { test: string; score: string; min: number; meets: boolean }[] = [];
-  for (const [testName, min] of Object.entries(numeric)) {
-    const tokens = testName
-      .toLowerCase()
-      .split(/[\s(/]+/)
-      .filter((tok) => tok.length > 2);
-    const candidate = profile.tests.find((t) => {
-      const lower = t.testType.toLowerCase();
-      return tokens.some((tok) => lower.includes(tok));
-    });
-    if (candidate) {
-      const meets = scoreMeets(candidate.score, String(min));
-      matching.push({ test: testName, score: candidate.score, min, meets: meets !== false });
+    const candidate = findFamilyTest(profile.tests, family);
+    if (!candidate) continue;
+    const value = parseScore(candidate.score);
+    let status: TestLine["status"];
+    if (value === null) {
+      status = "unknown_score";
+    } else if (!scoreInFamilyRange(family, value)) {
+      status = "unknown_score"; // impossible score → data problem, not a pass
+    } else if (testIsStale(candidate)) {
+      status = "stale";
+    } else {
+      status = value >= min ? "meets" : "below";
     }
+    lines.push({ test: testLabel, family, score: candidate.score, min, status });
   }
-  if (matching.length === 0) {
+
+  if (unresolvable.length > 0) {
     return {
-      result: "needs_information",
-      detail: `No matching official test result on your profile yet. Accepted tests: ${Object.keys(numeric).join(", ")}. Self-estimated levels never count here.`,
+      result: "needs_institution_confirmation",
+      detail: `${rule.detail} — accepted tests/scores for the current cycle need confirmation on the official page (${unresolvable.join(", ")}).`,
     };
   }
-  const anyMet = matching.some((m) => m.meets);
-  const best = matching.find((m) => m.meets) ?? matching[0];
-  if (anyMet) {
+  if (lines.length === 0) {
+    return {
+      result: "needs_information",
+      detail: `No matching official test result on your profile yet. Accepted tests: ${Object.keys(thresholds).join(", ")}. Self-estimated levels never count here.`,
+    };
+  }
+
+  if (lines.some((l) => l.status === "meets")) {
+    const best = lines.find((l) => l.status === "meets")!;
     return { result: "met", detail: `${best.test}: ${best.score} (minimum ${best.min}).` };
   }
+  if (lines.some((l) => l.status === "unknown_score" || l.status === "stale")) {
+    const l = lines.find((x) => x.status === "unknown_score" || x.status === "stale")!;
+    const why = l.status === "stale" ? "the result date looks older than the typical validity window" : "the recorded score could not be read as a number";
+    return {
+      result: "needs_information",
+      detail: `${l.test}: ${why}. Record the exact official score (and test date) to check this requirement.`,
+    };
+  }
+  const first = lines[0];
   return {
     result: "not_met",
-    detail: `${best.test}: ${best.score} is below the ${best.min} reference minimum. Plan a retake or an accepted alternative test.`,
+    detail: `${first.test}: ${first.score} is below the ${first.min} reference minimum. Plan a retake or an accepted alternative test.`,
   };
 }
 
-function ageAtIntake(profile: ProfileData): number | null {
+// ---------- Age (year-level honesty) ----------
+
+/**
+ * Age at intake from birth year spans two possible values (birthday before
+ * or after the intake date). A day-specific cutoff can only be answered
+ * "met"/"not_met" when BOTH scenarios agree; otherwise it stays open.
+ */
+function ageBoundsAtIntake(profile: ProfileData): { minAge: number; maxAge: number } | null {
   if (!profile.birthYear || !profile.targetIntakeYear) return null;
-  return profile.targetIntakeYear - profile.birthYear;
+  const span = profile.targetIntakeYear - profile.birthYear;
+  if (span < 0 || span > 100) return null;
+  return { minAge: span - 1, maxAge: span };
 }
 
 // ---------- Rule evaluation ----------
@@ -174,14 +305,18 @@ export function evaluateRule(
       const need = parseInt(rule.thresholdValue ?? "0", 10);
       const have = highestEducationYears(profile);
       if (have === null) {
+        const diploma = profile.qualifications.some((q) =>
+          /diploma/i.test(q.level));
         return {
           ...base,
-          result: "needs_information",
-          detail: `Your education level is not recorded clearly enough to check the ${need}-year requirement. Add your highest qualification in onboarding.`,
+          result: "needs_institution_confirmation",
+          detail: diploma
+            ? `Your education level is recorded as a diploma. Whether it counts as ${need} years for this route depends on the issuing board and the institution's recognition rules — confirm directly with them.`
+            : `Your education level is not recorded clearly enough to check the ${need}-year requirement. Add your highest qualification in onboarding.`,
         };
       }
       if (have >= need) {
-        return { ...base, result: "met", detail: `${have} years of education recorded (requirement: ${need} years).` };
+        return { ...base, result: "met", detail: `${have} years of education recorded (requirement: ${need} years). Credential recognition is checked separately by the institution.` };
       }
       return {
         ...base,
@@ -191,61 +326,91 @@ export function evaluateRule(
     }
 
     case "completed_bachelor": {
-      const status = hasCompletedBachelor(profile);
-      if (status === null) {
-        return { ...base, result: "needs_information", detail: "No bachelor's-level qualification recorded yet." };
+      const standing = bachelorStanding(profile);
+      switch (standing.kind) {
+        case "met":
+          return { ...base, result: "met", detail: `A completed bachelor's-level qualification (${standing.why}) is on your profile.` };
+        case "master_met":
+          return { ...base, result: "met", detail: `A completed master's (${standing.why}) is on your profile — bachelor's completion is implied.` };
+        case "expected":
+          return {
+            ...base,
+            result: "needs_information",
+            detail: "Your bachelor's is recorded as in progress/expected — it is not a completed qualification yet. This becomes checkable when you finish.",
+          };
+        case "three_year":
+          return {
+            ...base,
+            result: "needs_institution_confirmation",
+            detail: "A completed 3-year bachelor's is on your profile. Some routes accept it directly; others expect 4-year/honours — this is route-specific, so confirm with the programme.",
+          };
+        default:
+          return { ...base, result: "needs_information", detail: "No bachelor's-level qualification recorded yet." };
       }
-      if (status) {
-        return { ...base, result: "met", detail: "A completed bachelor's-level qualification is on your profile." };
-      }
-      return {
-        ...base,
-        result: "not_met",
-        detail: "A 3-year pass degree does not reach the typical 4-year/honours expectation of this route. Confirm equivalence with the institution.",
-      };
     }
 
     case "completed_master": {
-      const status = hasCompletedMaster(profile);
-      if (status === null) {
-        return { ...base, result: "needs_information", detail: "Master's-level completion not determinable from your profile yet." };
+      for (const q of profile.qualifications) {
+        if (/master/i.test(q.level)) {
+          if (qualificationStatus(q) === "completed") {
+            return { ...base, result: "met", detail: `A completed master's (${q.level}) is on your profile.` };
+          }
+          return { ...base, result: "needs_information", detail: "Your master's is recorded as in progress/expected — not completed yet." };
+        }
       }
-      if (status) return { ...base, result: "met", detail: "A completed master's degree is on your profile." };
-      return {
-        ...base,
-        result: rule.requiredness === "conditional" ? "needs_institution_confirmation" : "not_met",
-        detail:
-          rule.requiredness === "conditional"
-            ? "Most routes here require a master's; a very strong bachelor's occasionally suffices — confirm with the programme."
-            : "This route expects a completed master's degree.",
-      };
+      const bachelor = bachelorStanding(profile);
+      if (bachelor.kind === "met" || bachelor.kind === "master_met") {
+        return {
+          ...base,
+          result: rule.requiredness === "conditional" ? "needs_institution_confirmation" : "not_met",
+          detail:
+            rule.requiredness === "conditional"
+              ? "Most routes here require a master's; a very strong bachelor's occasionally suffices — confirm with the programme."
+              : "This route expects a completed master's degree.",
+        };
+      }
+      return { ...base, result: "needs_information", detail: "Master's-level completion not determinable from your profile yet." };
     }
 
     case "age_range":
     case "age_min":
     case "age_max": {
-      const age = ageAtIntake(profile);
-      if (age === null) {
+      const bounds = ageBoundsAtIntake(profile);
+      if (bounds === null) {
         return {
           ...base,
           result: "needs_information",
-          detail: "Add your birth year (optional field) to check this age rule.",
+          detail: "Add your birth year (optional field) to approximate this age rule. Exact cutoffs are day-specific, so final eligibility is still read from the current official guidelines.",
         };
       }
-      let ok = true;
+      let min = 0;
+      let max = 200;
       if (rule.operator === "age_range") {
-        const [min, max] = (rule.thresholdValue ?? "").split("-").map((n) => parseInt(n, 10));
-        ok = age >= (min || 0) && age <= (max || 200);
+        const [a, b] = (rule.thresholdValue ?? "").split("-").map((n) => parseInt(n, 10));
+        min = a || 0;
+        max = b || 200;
       } else if (rule.operator === "age_min") {
-        ok = age >= parseInt(rule.thresholdValue ?? "0", 10);
+        min = parseInt(rule.thresholdValue ?? "0", 10);
       } else {
-        ok = age <= parseInt(rule.thresholdValue ?? "200", 10);
+        max = parseInt(rule.thresholdValue ?? "200", 10);
       }
-      if (ok) return { ...base, result: "met", detail: `Age ${age} at intake fits the published window (with per-cycle cutoffs — still read the current guidelines).` };
+      // Provable in both birthday scenarios?
+      const certainMet = bounds.minAge >= min && bounds.maxAge <= max;
+      const certainNot = bounds.maxAge < min || bounds.minAge > max;
+      if (certainMet) {
+        return { ...base, result: "met", detail: `About ${profile.targetIntakeYear! - profile.birthYear!} at the target intake — inside the published window in every birthday scenario. Day-specific cutoffs still follow the current official guidelines.` };
+      }
+      if (certainNot) {
+        return {
+          ...base,
+          result: "not_met",
+          detail: `About ${profile.targetIntakeYear! - profile.birthYear!} at the target intake falls outside the historical window (${rule.thresholdValue}${rule.unit ? " " + rule.unit : ""}) in every scenario. Exact cutoffs move per cycle — verify the current call before deciding.`,
+        };
+      }
       return {
         ...base,
-        result: "not_met",
-        detail: `Age ${age} at the target intake falls outside the historical window (${rule.thresholdValue}${rule.unit ? " " + rule.unit : ""}). Exact cutoffs move per cycle — verify the current call before deciding.`,
+        result: "needs_institution_confirmation",
+        detail: `With a ${profile.birthYear} birth year you are near the edge of the window (${rule.thresholdValue}${rule.unit ? " " + rule.unit : ""}) — the outcome depends on the exact cutoff day, which only the current official guidelines state.`,
       };
     }
 
@@ -264,9 +429,11 @@ export function evaluateRule(
       if (accepted.length === 0) {
         return { ...base, result: "needs_institution_confirmation", detail: rule.detail };
       }
-      const held = profile.tests.filter((t) =>
-        accepted.some((name) => t.testType.toLowerCase().includes(name.toLowerCase())),
-      );
+      const acceptedFamilies = accepted.map((name) => testFamilyOf(name));
+      const held = profile.tests.filter((t) => {
+        const family = testFamilyOf(t.testType);
+        return family !== null && acceptedFamilies.includes(family);
+      });
       if (held.length > 0) {
         return { ...base, result: "met", detail: `Recorded: ${held.map((t) => `${t.testType} (${t.score})`).join(", ")}.` };
       }
@@ -399,8 +566,14 @@ export function evaluateOpportunity(
     needsConfirm: results.filter((r) => r.result === "needs_institution_confirmation").length,
     notApplicable: results.filter((r) => r.result === "not_applicable").length,
   };
+  // Blocking gaps come from REQUIRED rules only — optional/conditional
+  // recommendations guide preparation without gating eligibility.
   const gapTitles = results
-    .filter((r) => r.result === "not_met" || r.result === "needs_information")
+    .filter((r) => {
+      if (r.result !== "not_met" && r.result !== "needs_information") return false;
+      const rule = requirements.find((rule) => rule.id === r.ruleId);
+      return rule ? rule.requiredness === "required" : true;
+    })
     .map((r) => r.title);
   return {
     opportunitySlug,
