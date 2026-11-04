@@ -1,0 +1,73 @@
+# See https://help.github.com/articles/ignoring-files/ for more information.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — never commit secrets
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# logs
+*.log
+dev.log
+dev.out.log
+server.log
+
+# local editor / agent state
+local-*
+.claude
+.z-ai-config
+/skills/
+
+# sandbox infrastructure (not part of the product)
+/.zscripts/
+/examples/
+/mini-services/
+/tests/
+/download/
+/tool-results/
+/upload/
+Caddyfile
+
+# database files and private document storage
+/db/*.db
+/db/*.db-journal
+/db/private-docs/
+
+# prompt workspace
+prompt
