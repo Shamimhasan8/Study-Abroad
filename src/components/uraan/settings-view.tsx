@@ -42,6 +42,8 @@ export function SettingsView({ onSignIn }: { onSignIn: () => void }) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch { /* ignore */ }
+    // Owner switch: account → guest drops all cached account state.
+    useAppStore.getState().syncOwner(null);
     setUser(null);
     resetDomain();
     navigate("home");
@@ -52,6 +54,7 @@ export function SettingsView({ onSignIn }: { onSignIn: () => void }) {
       const res = await fetch("/api/account", { method: "DELETE" });
       const json = await res.json();
       if (json.ok) {
+        useAppStore.getState().syncOwner(null);
         setUser(null);
         resetDomain();
         navigate("home");

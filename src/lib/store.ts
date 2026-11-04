@@ -49,6 +49,15 @@ interface AppState {
   // identity
   user: SessionUser | null;
 
+  /** Which owner the persisted cache belongs to (null = guest). A cache
+   * saved under another account is discarded on load — student A's data
+   * can never render while student B is signed in. */
+  ownerKey: string | null;
+  /** True once the session (and, for accounts, /api/state) resolved. The
+   * shell renders a skeleton until then — account-specific state is never
+   * shown before its true owner is known. */
+  hydrated: boolean;
+
   // guest→account merge idempotency key (persisted; one per snapshot)
   importId: string | null;
 
@@ -67,6 +76,8 @@ interface AppState {
   clearCompare: () => void;
 
   setUser: (user: SessionUser | null) => void;
+  syncOwner: (user: SessionUser | null) => void;
+  setHydrated: (hydrated: boolean) => void;
   ensureImportId: () => string;
   clearImportId: () => void;
   setProfile: (profile: ProfileData | null) => void;
@@ -101,6 +112,9 @@ export const useAppStore = create<AppState>()(
 
       user: null,
 
+      ownerKey: null,
+      hydrated: false,
+
       importId: null,
 
       profile: null,
@@ -127,6 +141,32 @@ export const useAppStore = create<AppState>()(
       clearCompare: () => set({ compareSlugs: [] }),
 
       setUser: (user) => set({ user }),
+
+      syncOwner: (user) => {
+        const key = user?.id ?? null;
+        const prev = get().ownerKey;
+        if (prev === key) return;
+        if (prev === null && key !== null) {
+          // guest → account: guest data intentionally survives until the
+          // explicit merge decision (merge/skip/conflict flows clear it).
+          set({ ownerKey: key });
+        } else {
+          // logout, or account A → account B: discard the previous owner's
+          // cached domain state entirely.
+          set({
+            ownerKey: key,
+            profile: null,
+            plan: null,
+            goalSlug: null,
+            shortlist: [],
+            applications: [],
+            evaluations: {},
+            importId: null,
+          });
+        }
+      },
+
+      setHydrated: (hydrated) => set({ hydrated }),
 
       ensureImportId: () => {
         const existing = get().importId;
@@ -211,6 +251,7 @@ export const useAppStore = create<AppState>()(
       // Persist only durable domain state — navigation and identity are
       // re-derived on load (session from cookie, view starts at home).
       partialize: (state) => ({
+        ownerKey: state.ownerKey,
         importId: state.importId,
         profile: state.profile,
         plan: state.plan,

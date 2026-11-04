@@ -65,16 +65,21 @@ export function AuthDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
         toast({
-          title: mode === "login" ? t("auth.loginFailed") : json.error === "email_taken" ? t("auth.emailTaken") : json.error === "weak_password" ? t("auth.weakPassword") : t("common.error"),
+          title: mode === "login" ? t("auth.loginFailed") : json?.error === "email_taken" ? t("auth.emailTaken") : json?.error === "weak_password" ? t("auth.weakPassword") : t("common.error"),
           variant: "destructive",
         });
         return;
       }
-      setUser(json.data.user as SessionUser);
-      if (mode === "register" && hasGuestData) {
+      const user = json.data.user as SessionUser;
+      // Mark the cache owner BEFORE hydrating: an account-A cache is
+      // discarded when account B signs in; guest data survives only for
+      // the explicit merge decision.
+      useAppStore.getState().syncOwner(user);
+      setUser(user);
+      if (hasGuestData) {
         setMergePrompt(true); // explicit merge question before moving data
       } else {
         await hydrateServerState();
@@ -93,11 +98,11 @@ export function AuthDialog({
       const json = await res.json();
       if (res.ok && json.ok) {
         const s = json.data;
-        if (s.profile) useAppStore.getState().setProfile(s.profile);
-        if (s.plan) useAppStore.getState().setPlan(s.plan);
+        useAppStore.getState().setProfile(s.profile ?? null);
+        useAppStore.getState().setPlan(s.plan ?? null);
         useAppStore.getState().setApplications(s.applications ?? []);
-        if (s.goalSlug) useAppStore.getState().setGoal(s.goalSlug);
-        if (s.shortlist) useAppStore.getState().setShortlist(s.shortlist);
+        useAppStore.getState().setGoal(s.goalSlug ?? null);
+        useAppStore.getState().setShortlist(s.shortlist ?? []);
       }
     } catch {
       /* state hydration failure keeps local state; retry on next action */
@@ -242,49 +247,48 @@ export function AuthDialog({
     );
   }
 
-  if (conflict) {
+  if (mergePrompt || conflict) {
+    // While a merge decision (or conflict choice) is pending, the dialog
+    // cannot be dismissed — a stray close must never strand guest data
+    // under the wrong owner. The user picks an explicit outcome.
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) return; // must resolve via the buttons
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>{t("auth.conflictTitle")}</DialogTitle>
-            <DialogDescription>{t("auth.conflictBody")}</DialogDescription>
+            <DialogTitle>{conflict ? t("auth.conflictTitle") : t("auth.mergeTitle")}</DialogTitle>
+            <DialogDescription>{conflict ? t("auth.conflictBody") : t("auth.mergeBody")}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border p-3">
-              <p className="text-sm font-semibold">{t("auth.conflictServer")}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{conflict.existing.goalSlug ?? "—"}</p>
-              <p className="mt-2 text-xs">{t("auth.conflictMeta", { tasks: String(conflict.existing.taskCount), completed: String(conflict.existing.completed) })}</p>
-            </div>
-            <div className="rounded-lg border p-3">
-              <p className="text-sm font-semibold">{t("auth.conflictGuest")}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{conflict.incoming.goalSlug ?? "—"}</p>
-              <p className="mt-2 text-xs">{t("auth.conflictMeta", { tasks: String(conflict.incoming.taskCount), completed: String(conflict.incoming.completed) })}</p>
-            </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => void keepServerPlan()} disabled={busy}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-              {t("auth.conflictKeep")}
-            </Button>
-            <Button onClick={() => void mergeGuest({ confirmReplace: true })} disabled={busy}>
-              {t("auth.conflictReplace")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (mergePrompt) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("auth.mergeTitle")}</DialogTitle>
-            <DialogDescription>{t("auth.mergeBody")}</DialogDescription>
-          </DialogHeader>
-          {mergeFailed ? (
+          {conflict ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm font-semibold">{t("auth.conflictServer")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{conflict.existing.goalSlug ?? "—"}</p>
+                  <p className="mt-2 text-xs">{t("auth.conflictMeta", { tasks: String(conflict.existing.taskCount), completed: String(conflict.existing.completed) })}</p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <p className="text-sm font-semibold">{t("auth.conflictGuest")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{conflict.incoming.goalSlug ?? "—"}</p>
+                  <p className="mt-2 text-xs">{t("auth.conflictMeta", { tasks: String(conflict.incoming.taskCount), completed: String(conflict.incoming.completed) })}</p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <Button variant="outline" onClick={() => void keepServerPlan()} disabled={busy}>
+                  {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                  {t("auth.conflictKeep")}
+                </Button>
+                <Button onClick={() => void mergeGuest({ confirmReplace: true })} disabled={busy}>
+                  {t("auth.conflictReplace")}
+                </Button>
+              </div>
+            </>
+          ) : mergeFailed ? (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
               <p>{t("auth.mergeKept")}</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -293,6 +297,9 @@ export function AuthDialog({
                 </Button>
                 <Button variant="outline" size="sm" onClick={exportGuestData}>
                   {t("auth.exportData")}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={skipMerge}>
+                  {t("auth.mergeSkip")}
                 </Button>
               </div>
             </div>

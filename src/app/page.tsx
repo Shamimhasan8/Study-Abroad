@@ -23,32 +23,63 @@ import { SourcesView } from "@/components/uraan/sources-view";
 import { SettingsView } from "@/components/uraan/settings-view";
 import { AdminView } from "@/components/uraan/admin-view";
 import { AuthDialog } from "@/components/uraan/auth-dialog";
-import type { SessionUser } from "@/lib/types";
 
 function Shell() {
   const view = useAppStore((s) => s.view);
-  const setUser = useAppStore((s) => s.setUser);
+  const hydrated = useAppStore((s) => s.hydrated);
   const [authOpen, setAuthOpen] = useState(false);
 
-  // Session bootstrap: if a valid session cookie exists, hydrate identity.
-  // Guests simply stay guests — public browsing never requires sign-in.
+  // Startup contract (audited fix P1-2):
+  // 1. Resolve the session FIRST — the shell stays a skeleton so no
+  //    cached state of another owner can ever render.
+  // 2. For a signed-in user, hydrate the FULL /api/state before revealing
+  //    account-specific views; guests continue from their local cache.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const finish = () => {
+        if (!cancelled) useAppStore.getState().setHydrated(true);
+      };
       try {
         const res = await fetch("/api/auth/session");
-        const json = await res.json();
-        if (!cancelled && json.ok && json.data?.user) {
-          setUser(json.data.user as SessionUser);
+        const json = await res.json().catch(() => null);
+        const user = res.ok && json?.ok ? (json.data?.user ?? null) : null;
+        if (cancelled) return;
+        if (user) {
+          // Drop any cache that belongs to a different owner (or another
+          // account), then load this account's server truth.
+          useAppStore.getState().syncOwner(user);
+          useAppStore.getState().setUser(user);
+          try {
+            const stateRes = await fetch("/api/state");
+            const stateJson = await stateRes.json().catch(() => null);
+            if (!cancelled && stateRes.ok && stateJson?.ok) {
+              const s = stateJson.data;
+              useAppStore.getState().setProfile(s.profile ?? null);
+              useAppStore.getState().setPlan(s.plan ?? null);
+              useAppStore.getState().setApplications(s.applications ?? []);
+              useAppStore.getState().setGoal(s.goalSlug ?? null);
+              useAppStore.getState().setShortlist(s.shortlist ?? []);
+            }
+          } catch {
+            /* hydration failed: retry on next action; local cache stays empty for accounts */
+          }
+          finish();
+        } else {
+          useAppStore.getState().syncOwner(null);
+          finish();
         }
       } catch {
-        /* offline or route not yet deployed — guest mode continues */
+        // Offline / route failure: continue as guest with local cache.
+        useAppStore.getState().syncOwner(null);
+        finish();
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [setUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -60,21 +91,42 @@ function Shell() {
       </a>
       <UraanHeader onSignIn={() => setAuthOpen(true)} />
       <div id="main-content" className="flex flex-1 flex-col">
-        {view === "home" && <HomeView />}
-        {view === "onboarding" && <OnboardingView />}
-        {view === "journey" && <JourneyView />}
-        {view === "explore" && <ExploreView />}
-        {view === "detail" && <OpportunityDetailView />}
-        {view === "compare" && <CompareView />}
-        {view === "prepare" && <PrepareView />}
-        {view === "applications" && <ApplicationsView />}
-        {view === "calendar" && <CalendarView />}
-        {view === "sources" && <SourcesView />}
-        {view === "settings" && <SettingsView onSignIn={() => setAuthOpen(true)} />}
-        {view === "admin" && <AdminView />}
+        {!hydrated ? (
+          <StartupSkeleton />
+        ) : (
+          <>
+            {view === "home" && <HomeView />}
+            {view === "onboarding" && <OnboardingView />}
+            {view === "journey" && <JourneyView />}
+            {view === "explore" && <ExploreView />}
+            {view === "detail" && <OpportunityDetailView />}
+            {view === "compare" && <CompareView />}
+            {view === "prepare" && <PrepareView />}
+            {view === "applications" && <ApplicationsView />}
+            {view === "calendar" && <CalendarView />}
+            {view === "sources" && <SourcesView />}
+            {view === "settings" && <SettingsView onSignIn={() => setAuthOpen(true)} />}
+            {view === "admin" && <AdminView />}
+          </>
+        )}
       </div>
       <UraanFooter />
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+    </div>
+  );
+}
+
+/** Shown while the session resolves — never another user's cached state. */
+function StartupSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6" aria-busy="true" aria-label="Loading your workspace">
+      <div className="h-10 w-2/3 max-w-md animate-pulse rounded-lg bg-muted" />
+      <div className="mt-4 h-4 w-1/2 max-w-sm animate-pulse rounded bg-muted" />
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-32 animate-pulse rounded-xl border border-border/60 bg-muted/60" />
+        ))}
+      </div>
     </div>
   );
 }
