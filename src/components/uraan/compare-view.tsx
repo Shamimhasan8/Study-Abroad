@@ -132,7 +132,7 @@ export function CompareView() {
                       <span key={f.id} className="text-xs text-muted-foreground">
                         {f.label}
                         {f.amount !== undefined ? ` (${formatForeign(f.amount, f.currency)}/${f.period === "monthly" ? (lang === "bn" ? "মাস" : "mo") : f.period === "annual" ? (lang === "bn" ? "বছর" : "yr") : f.period})` : ""}
-                        {!f.guaranteed ? " ⚠" : ""}
+                        {f.status === "competitive" ? " ⚠" : ""}
                       </span>
                     ))}
                     {o.funding.length === 0 && <span className="text-xs text-muted-foreground">{dash}</span>}

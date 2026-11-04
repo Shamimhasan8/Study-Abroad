@@ -1,57 +1,67 @@
 /**
  * Uraan funding engine — the affordability worksheet.
  *
- * Rules of honesty:
+ * Rules of honesty (audited repairs in this version):
  * - Competitive awards are shown but never counted as guaranteed coverage.
- * - Unknown amounts keep the total from being reported as exact.
- * - The planning exchange rate is user-set and clearly labelled; no live
- *   rates are fetched or implied.
+ * - Unknown amounts/periods keep totals from being reported as exact; the
+ *   known subtotal and unknown categories are surfaced instead.
+ * - A `total_award` without a duration is never annualized.
+ * - Planning rates are per-currency, user-entered, and clearly labelled as
+ *   planning values — there are NO hardcoded rates and no live-rate claim.
+ * - Empty cost records mean "living costs undocumented", never zero.
  */
 import { sumAnnualCosts, sumFunding, sumUpfront } from "@/lib/money";
 import type { FundingWorksheet, Opportunity, ProfileData } from "@/lib/types";
 
-/** Sensible default planning rates (clearly labelled as user-editable). */
-export const DEFAULT_PLANNING_RATES: Record<string, number> = {
-  USD: 118, // BDT per USD
-  EUR: 128, // BDT per EUR
-  JPY: 0.78, // BDT per JPY
-};
+/** Currencies that appear in this opportunity's costs/funding. */
+export function worksheetCurrencies(opportunity: Opportunity): string[] {
+  const set = new Set<string>();
+  for (const c of opportunity.costs) if (c.currency !== "BDT") set.add(c.currency);
+  for (const f of opportunity.funding) if (f.currency !== "BDT") set.add(f.currency);
+  return [...set].sort();
+}
 
 export function buildFundingWorksheet(
   opportunity: Opportunity,
   profile: ProfileData,
-  customRate?: number,
+  planningRates: Record<string, number> = {},
 ): FundingWorksheet {
-  const rates: Record<string, number> = { ...DEFAULT_PLANNING_RATES, BDT: 1 };
-  if (customRate && customRate > 0) {
-    // A single custom rate applies to the opportunity's dominant currency.
-    const dominant = opportunity.costs[0]?.currency ?? opportunity.funding[0]?.currency;
-    if (dominant) rates[dominant] = customRate;
+  // BDT is native; every other currency needs a user-entered planning rate.
+  const rates: Record<string, number> = { BDT: 1 };
+  for (const [currency, rate] of Object.entries(planningRates)) {
+    if (rate > 0) rates[currency] = rate;
   }
 
-  const costResult = sumAnnualCosts(opportunity.costs, rates[opportunity.costs[0]?.currency ?? "USD"]);
-  const fundingResult = sumFunding(opportunity.funding, rates[opportunity.funding[0]?.currency ?? "USD"]);
-  const upfront = sumUpfront(opportunity.costs, rates[opportunity.costs[0]?.currency ?? "USD"]);
+  const costResult = sumAnnualCosts(opportunity.costs, rates);
+  const fundingResult = sumFunding(opportunity.funding, rates);
+  const upfront = sumUpfront(opportunity.costs, rates);
 
-  const hasUnknownCosts = costResult.missing > 0 || upfront.missing > 0 || fundingResult.hasUnknownAmounts;
+  const hasUnknownCosts =
+    costResult.noDocumentedCosts ||
+    costResult.missing > 0 ||
+    upfront.missing > 0 ||
+    fundingResult.hasUnknownAmounts;
 
+  // Uncovered annual cost is only exact when the full annual cost total is
+  // known AND the guaranteed side is fully resolved.
+  // Uncovered after POLICY-promise coverage: conditional on admission/aid
+  // application; competitive awards never reduce this figure.
   let uncoveredAnnualBdt: number | undefined;
-  if (costResult.total !== null && fundingResult.guaranteedAnnualBdt !== null) {
-    const uncovered = costResult.total - fundingResult.guaranteedAnnualBdt;
+  if (costResult.total !== null && fundingResult.policyAnnualBdt !== null) {
+    const uncovered = costResult.total - fundingResult.policyAnnualBdt;
     uncoveredAnnualBdt = Math.max(0, uncovered);
   }
 
-  // Upfront need: one-time costs not covered by guaranteed funding that
-  // pays out later (stipends) — compares against the user's upfront funds.
+  // Upfront cash need: one-time items must be available before they fall
+  // due. A future stipend never nets against today's deposit here — timing
+  // is handled in the note, not by subtraction.
   let upfrontNeededBdt: number | undefined;
   if (upfront.upfrontBdt !== null) {
     upfrontNeededBdt = upfront.upfrontBdt;
   }
 
-  // Attach the planning rate actually used for the first foreign currency.
-  const firstForeign =
-    opportunity.costs.find((c) => c.currency !== "BDT")?.currency ??
-    opportunity.funding.find((f) => f.currency !== "BDT")?.currency;
+  const foreign = worksheetCurrencies(opportunity);
+  const missingRateCurrencies = foreign.filter((c) => !rates[c]);
 
   return {
     opportunitySlug: opportunity.slug,
@@ -60,9 +70,13 @@ export function buildFundingWorksheet(
     uncoveredAnnualBdt,
     upfrontNeededBdt,
     hasUnknownCosts,
-    guaranteedAnnualBdt: fundingResult.guaranteedAnnualBdt ?? undefined,
+    policyAnnualBdt: fundingResult.policyAnnualBdt ?? undefined,
     competitiveAnnualBdt: fundingResult.competitiveAnnualBdt ?? undefined,
-    planningRate: firstForeign ? rates[firstForeign] : undefined,
+    planningRates: foreign.length > 0 ? Object.fromEntries(foreign.map((c) => [c, rates[c] ?? null])) : undefined,
+    knownCostSubtotalBdt: costResult.knownSubtotal > 0 ? costResult.knownSubtotal : undefined,
+    unknownCategories: [...new Set([...costResult.unknownCategories])],
+    noDocumentedCosts: costResult.noDocumentedCosts,
+    missingRateCurrencies,
   };
 }
 

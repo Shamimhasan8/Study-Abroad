@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { deadlineLabel } from "@/lib/dates";
 import { formatBdt, formatForeign } from "@/lib/money";
-import { buildFundingWorksheet, contributionContext } from "@/lib/funding/engine";
+import { buildFundingWorksheet, contributionContext, worksheetCurrencies } from "@/lib/funding/engine";
 import type { EvaluationSummary, Opportunity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,8 @@ export function OpportunityDetailView() {
   const [matchError, setMatchError] = useState(false);
   const [explainBusy, setExplainBusy] = useState(false);
   const [explanation, setExplanation] = useState<{ text: string; aiGenerated: boolean } | null>(null);
-  const [customRate, setCustomRate] = useState<number | undefined>(undefined);
+  // Per-currency user-entered planning rates (never hardcoded defaults).
+  const [rates, setRates] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!detailSlug) {
@@ -132,7 +133,7 @@ export function OpportunityDetailView() {
     );
   }
 
-  const worksheet = buildFundingWorksheet(opportunity, profile ?? { degreeLevel: "undecided", fieldInterests: [], intakeFlexible: true, citizenships: [], uiLanguage: "en", qualifications: [], languages: [], tests: [], financeUncertain: false, countryPrefs: [], instructionLang: "any", willingToLearnLang: false, onboardingCompleted: false }, customRate);
+  const worksheet = buildFundingWorksheet(opportunity, profile ?? { degreeLevel: "undecided", fieldInterests: [], intakeFlexible: true, citizenships: [], uiLanguage: "en", qualifications: [], languages: [], tests: [], financeUncertain: false, countryPrefs: [], instructionLang: "any", willingToLearnLang: false, onboardingCompleted: false }, rates);
   const contribution = contributionContext(profile ?? ({} as never), worksheet.uncoveredAnnualBdt);
 
   const resultIcon = (result: string) => {
@@ -324,9 +325,9 @@ export function OpportunityDetailView() {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {f.guaranteed ? "✔" : "⚠"}{" "}
-                      {f.guaranteed
-                        ? lang === "bn" ? "নীতি অনুযায়ী নিশ্চিত কভারেজ (নির্বাচিত হলে)" : "Guaranteed by policy (if selected)"
+                      {f.status === "policy" ? "🛡" : "⚠"}{" "}
+                      {f.status === "policy"
+                        ? lang === "bn" ? "প্রতিষ্ঠানের নীতি-সহায়তা (ভর্তি ও সহায়তা আবেদন শর্তে)" : "Institutional aid-policy promise (if admitted, aid application approved)"
                         : lang === "bn" ? "প্রতিযোগিতামূলক অ্যাওয়ার্ড — নিশ্চিত অর্থ নয়" : "Competitive award — not guaranteed funds"}
                     </p>
                     {f.restrictions && <p className="mt-0.5 text-xs italic text-muted-foreground">{f.restrictions}</p>}
@@ -361,23 +362,49 @@ export function OpportunityDetailView() {
           <AccordionTrigger className="text-base font-semibold">{t("detail.worksheet")}</AccordionTrigger>
           <AccordionContent>
             <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-secondary/60 p-3">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="planning-rate" className="text-xs font-semibold text-foreground/80">
-                  {t("funding.rate")}
-                </label>
-                <input
-                  id="planning-rate"
-                  type="number"
-                  min={0.01}
-                  step={0.01}
-                  defaultValue={worksheet.planningRate ?? ""}
-                  onBlur={(e) => setCustomRate(e.target.value ? Number(e.target.value) : undefined)}
-                  className="h-9 w-36 rounded-md border border-border bg-card px-3 text-sm tabular-nums"
-                  placeholder={String(worksheet.planningRate ?? "rate")}
-                />
-              </div>
+              {(worksheetCurrencies(opportunity).length === 0 ? ["—"] : worksheetCurrencies(opportunity)).map((currency) =>
+                currency === "—" ? null : (
+                  <div key={currency} className="flex flex-col gap-1">
+                    <label htmlFor={`planning-rate-${currency}`} className="text-xs font-semibold text-foreground/80">
+                      {t("funding.rate")} · {currency}
+                    </label>
+                    <input
+                      id={`planning-rate-${currency}`}
+                      type="number"
+                      min={0.01}
+                      step={0.01}
+                      value={rates[currency] ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value ? Number(e.target.value) : undefined;
+                        setRates((prev) => {
+                          const next = { ...prev };
+                          if (value && value > 0) next[currency] = value;
+                          else delete next[currency];
+                          return next;
+                        });
+                      }}
+                      className="h-9 w-36 rounded-md border border-border bg-card px-3 text-sm tabular-nums"
+                      placeholder={`BDT / ${currency}`}
+                    />
+                  </div>
+                ),
+              )}
               <p className="flex-1 text-xs leading-relaxed text-muted-foreground">{t("funding.rateNote")}</p>
             </div>
+            {worksheet.missingRateCurrencies && worksheet.missingRateCurrencies.length > 0 && (
+              <p className="mb-3 rounded-lg border border-border/70 bg-accent/40 p-2.5 text-xs leading-relaxed text-foreground/80">
+                {lang === "bn"
+                  ? `এই কারেন্সিগুলোর প্ল্যানিং রেট এখনো দেওয়া হয়নি: ${worksheet.missingRateCurrencies.join(", ")} — সেই লাইনগুলো অজানা থাকে, ভুল সংখ্যা বসানো হয় না।`
+                  : `No planning rate entered yet for ${worksheet.missingRateCurrencies.join(", ")} — those lines stay unknown rather than being converted with a wrong number.`}
+              </p>
+            )}
+            {worksheet.noDocumentedCosts && (
+              <p className="mb-3 rounded-lg border border-border/70 bg-accent/40 p-2.5 text-xs leading-relaxed text-foreground/80">
+                {lang === "bn"
+                  ? "এই রেকর্ডে জীবনযাপনের খরচের কোনো ডকুমেন্টেড লাইন নেই — খরচ শূন্য নয়, অজানা। অফিসিয়াল পাতায় বর্তমান সংখ্যা দেখে নিন।"
+                  : "This record documents no living-cost lines — that means unknown, not free. Check the current official cost-of-living figures before planning."}
+              </p>
+            )}
             {worksheet.costLines.length === 0 && worksheet.fundingLines.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("funding.unknownNote")}</p>
             ) : (
@@ -414,7 +441,26 @@ export function OpportunityDetailView() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">{t("funding.unknownNote")}</p>
+                  <div className="rounded-lg border border-border/70 bg-accent/40 p-3">
+                    <p className="text-sm font-semibold">
+                      {lang === "bn" ? "সঠিক মোট এখন দেওয়া সম্ভব নয়" : "An exact total is not possible yet"}
+                    </p>
+                    {worksheet.knownCostSubtotalBdt !== undefined && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {lang === "bn" ? "পরিচিত অংশ (বার্ষিক):" : "Known annual subtotal:"}{" "}
+                        {formatBdt(worksheet.knownCostSubtotalBdt)}{" "}
+                        {lang === "bn" ? "— অজানা লাইন যোগ হলে বাড়বে" : "— grows as unknown lines are resolved"}
+                      </p>
+                    )}
+                    {worksheet.unknownCategories && worksheet.unknownCategories.length > 0 && (
+                      <ul className="mt-1.5 list-disc pl-5 text-xs leading-relaxed text-muted-foreground">
+                        {worksheet.unknownCategories.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-1.5 text-xs italic text-muted-foreground">{t("funding.unknownNote")}</p>
+                  </div>
                 )}
               </>
             )}

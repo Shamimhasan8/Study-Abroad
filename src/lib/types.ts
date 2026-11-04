@@ -142,7 +142,13 @@ export interface FundingItem {
   amount?: number;
   currency: string;
   period: "annual" | "semester" | "monthly" | "one_time" | "total_award";
-  guaranteed: boolean; // false = competitive/conditional
+  /**
+   * Competitive: win-based award — never counted as guaranteed funds while
+   * planning. Policy: institutional funding promise (e.g. need-based aid
+   * meeting demonstrated need) — conditional on admission/aid application.
+   * A user's confirmed award is account-level data, never catalogue data.
+   */
+  status: "competitive" | "policy";
   restrictions?: string;
   renewalTerms?: string;
 }
@@ -262,9 +268,19 @@ export interface FundingWorksheet {
   uncoveredAnnualBdt?: number; // undefined when unknowns prevent a total
   upfrontNeededBdt?: number;
   hasUnknownCosts: boolean;
-  guaranteedAnnualBdt?: number;
+  /** Policy-promise coverage (conditional on admission/aid application). */
+  policyAnnualBdt?: number;
   competitiveAnnualBdt?: number;
-  planningRate?: number; // user-set BDT per foreign unit
+  /** Per-currency user-entered planning rates actually used (null = missing). */
+  planningRates?: Record<string, number | null>;
+  /** Known portion of annual costs even when the exact total is blocked. */
+  knownCostSubtotalBdt?: number;
+  /** Categories whose amounts/periods/rates are unknown — never silently zero. */
+  unknownCategories?: string[];
+  /** True when the record documents no cost lines at all (living costs unknown, not free). */
+  noDocumentedCosts?: boolean;
+  /** Foreign currencies still lacking a user planning rate. */
+  missingRateCurrencies?: string[];
 }
 
 // ---------- Applications ----------

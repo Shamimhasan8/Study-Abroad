@@ -115,7 +115,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         label: "Full tuition + university fees",
         currency: "JPY",
         period: "annual",
-        guaranteed: true,
+        status: "competitive",
       },
       {
         id: "mext-ug-stipend",
@@ -124,7 +124,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         amount: 117000,
         currency: "JPY",
         period: "monthly",
-        guaranteed: true,
+        status: "competitive",
         restrictions: "Stipend rate per recent published cycles; suspended during language-preparation year in some setups — verify the current call.",
       },
       {
@@ -133,7 +133,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         label: "Round-trip airfare",
         currency: "JPY",
         period: "one_time",
-        guaranteed: true,
+        status: "competitive",
       },
     ],
     exclusions: [
@@ -253,7 +253,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         label: "Full tuition + university fees",
         currency: "JPY",
         period: "annual",
-        guaranteed: true,
+        status: "competitive",
       },
       {
         id: "mext-rs-stipend",
@@ -262,7 +262,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         amount: 143000,
         currency: "JPY",
         period: "monthly",
-        guaranteed: true,
+        status: "competitive",
         restrictions: "Graduate rate per recent published cycles; slightly higher rates apply in some regions/cycles — verify the current call.",
       },
       {
@@ -271,7 +271,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
         label: "Round-trip airfare",
         currency: "JPY",
         period: "one_time",
-        guaranteed: true,
+        status: "competitive",
       },
     ],
     exclusions: [
