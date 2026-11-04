@@ -8,6 +8,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
+import { apiPost } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 export function OpportunityDetailView() {
   const { t, lang } = useI18n();
+  const { toast } = useToast();
   const { detailSlug, navigate, profile, evaluations, setEvaluation, shortlist, toggleShortlist, setGoal, goalSlug, user } = useAppStore();
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,11 +64,13 @@ export function OpportunityDetailView() {
   const onToggleShortlist = (slug: string) => {
     toggleShortlist(slug);
     if (user) {
-      void fetch("/api/shortlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      }).catch(() => undefined);
+      void (async () => {
+        const result = await apiPost("/api/shortlist", { slug });
+        if (!result.ok) {
+          toggleShortlist(slug); // roll back to the server's truth
+          toast({ title: t("common.error"), description: t("common.shortlistRetry"), variant: "destructive" });
+        }
+      })();
     }
   };
   const runMatch = async () => {

@@ -8,6 +8,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
+import { apiPost } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,7 @@ import {
 
 export function JourneyView() {
   const { t, lang } = useI18n();
+  const { toast } = useToast();
   const {
     navigate, profile, plan, goalSlug, setPlan, setEvaluation, evaluations, user, patchTask,
   } = useAppStore();
@@ -140,14 +143,25 @@ export function JourneyView() {
   const currentPhase = nextActions[0] ? PHASE_LABELS[lang][phaseOfTask(nextActions[0].dueDate)] : undefined;
 
   const completeTask = async (taskId: string) => {
-    patchTask(taskId, { status: "done" });
     if (user) {
-      void fetch("/api/plan/task", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, status: "done" }),
-      }).catch(() => undefined);
+      // Signed-in: persist first, celebrate after the server confirms;
+      // a failure rolls the tick back with a retryable toast.
+      const result = await apiPost("/api/plan/task", { taskId, status: "done" });
+      if (result.ok) {
+        patchTask(taskId, { status: "done" });
+        setFly(true);
+        setTimeout(() => setFly(false), 1400);
+      } else {
+        toast({
+          title: t("common.error"),
+          description: t("journey.taskRetry"),
+          variant: "destructive",
+        });
+      }
+      return;
     }
+    // Guest: local persistence is the durable store for this browser.
+    patchTask(taskId, { status: "done" });
     setFly(true);
     setTimeout(() => setFly(false), 1400);
   };

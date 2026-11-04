@@ -7,6 +7,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { useToast } from "@/hooks/use-toast";
+import { apiPost } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +27,7 @@ type CatalogueResponse = {
 
 export function ExploreView() {
   const { t, lang } = useI18n();
+  const { toast } = useToast();
   const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare, profile, user } = useAppStore();
   const { query, country, level, cycle } = useAppStore((s) => s.exploreFilters);
   const setExploreFilters = useAppStore((s) => s.setExploreFilters);
@@ -113,15 +116,18 @@ export function ExploreView() {
     navigate("detail", slug);
   };
 
-  // Shortlist sync: guests keep it locally; signed-in users persist via API.
+  // Shortlist sync: guests keep it locally; signed-in users persist via API
+  // with rollback — the UI never stays ahead of a failed server write.
   const onToggleShortlist = (slug: string) => {
     toggleShortlist(slug);
     if (user) {
-      void fetch("/api/shortlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      }).catch(() => undefined);
+      void (async () => {
+        const result = await apiPost("/api/shortlist", { slug });
+        if (!result.ok) {
+          toggleShortlist(slug); // roll back to the server's truth
+          toast({ title: t("common.error"), description: t("common.shortlistRetry"), variant: "destructive" });
+        }
+      })();
     }
   };
 
