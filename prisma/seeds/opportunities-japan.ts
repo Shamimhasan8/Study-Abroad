@@ -307,18 +307,18 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
       "জাপানের শীর্ষ জাতীয় বিশ্ববিদ্যালয়গুলোর একটিতে দুটি ইংরেজি-মাধ্যম আন্ডারগ্র্যাজুয়েট ডিগ্রি প্রোগ্রাম। এটি স্ব-অর্থায়িত পথ: জাতীয় বিশ্ববিদ্যালয়ের টিউশন প্রযোজ্য, ভর্তির সাথে বৃত্তি নেই।",
     fundingType: "Self-funded (need-based/private scholarships may be applied separately)",
     applyUrl: "https://www.u-tokyo.ac.jp/en/admissions/undergraduate/e_peak.html",
-    cycleYear: 2027,
-    cycleStatus: "in_progress",
+    cycleYear: 2026,
+    cycleStatus: "closed",
     deadlineNote:
-      "Applications historically open around November and close around January for the following October intake. Verify the current cycle's exact dates on the official PEAK admissions page.",
+      "PEAK's final recruitment was for the fall 2026 enrolment (application window closed around January 2026); the programme is not recruiting further cohorts. Kept as a historical record for preparation context — never listed as open/upcoming.",
     deadlines: [
       {
         id: "peak-window",
         type: "admission",
-        closeDate: "2027-01-31",
+        closeDate: "2026-01-31",
         precision: "window",
-        official: false,
-        note: "Approximate historical window (Nov–Jan) for October intake. Confirm exact dates on the official page.",
+        official: true,
+        note: "Final recruitment window (concluded). Source: UTokyo PEAK official closure notice (May 12, 2025) — final admission was for fall 2026; no future application dates exist.",
       },
     ],
     requirements: [
@@ -399,7 +399,7 @@ export const JAPAN_OPPORTUNITIES: Opportunity[] = [
     sources: [
       src("utokyo-peak", "https://www.u-tokyo.ac.jp/en/admissions/undergraduate/e_peak.html", "UTokyo PEAK — Programs in English at Komaba", "University of Tokyo"),
     ],
-    reviewState: "baseline_review",
+    reviewState: "pending_recheck",
     retrievedAt: BASELINE,
   },
 ];

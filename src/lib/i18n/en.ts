@@ -240,6 +240,7 @@ export const en = {
   "detail.officialNote": "Always confirm details on the official page before relying on them.",
   "review.baseline": "Checked at research baseline — re-verify this cycle",
   "review.verified": "Verified current cycle",
+  "review.pending": "Pending recheck — a fact here needs re-verification against the current official source (flagged during the repair audit).",
   "review.stale": "Possibly outdated — re-verification pending",
   "detail.gapTitle": "What's missing for you",
   "detail.gapEmpty": "No documented gaps found in reviewed requirements.",

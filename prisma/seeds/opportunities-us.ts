@@ -35,23 +35,23 @@ export const US_OPPORTUNITIES: Opportunity[] = [
     cycleYear: 2027,
     cycleStatus: "in_progress",
     deadlineNote:
-      "Early Action deadline historically in early November and Regular Action in early January (date-only). Verify exact dates on MIT Admissions for the current cycle.",
+      "Current cycle (verified live on the MIT deadlines page 2026-11-04): Early Action November 1, 2026 and Regular Action January 4, 2027, both date-only. An older FAQ page refers to January 5 for a prior cycle — the current canonical deadlines page governs; the conflict is retained here deliberately.",
     deadlines: [
       {
         id: "mit-ea",
         type: "admission",
         closeDate: "2026-11-01",
-        precision: "month",
-        official: false,
-        note: "Early Action historically November 1 (date-only). Confirm on mitadmissions.org.",
+        precision: "date",
+        official: true,
+        note: "Early Action due November 1 (verified live 2026-11-04 on mitadmissions.org/apply/firstyear/deadlines-requirements/).",
       },
       {
         id: "mit-ra",
         type: "admission",
-        closeDate: "2027-01-01",
-        precision: "month",
-        official: false,
-        note: "Regular Action historically early January. Confirm on mitadmissions.org.",
+        closeDate: "2027-01-04",
+        precision: "date",
+        official: true,
+        note: "Regular Action due January 4 (verified live 2026-11-04; older FAQ said Jan 5 for a prior cycle — conflict retained, current canonical page governs).",
       },
     ],
     requirements: [
@@ -319,7 +319,7 @@ export const US_OPPORTUNITIES: Opportunity[] = [
     cycleYear: undefined,
     cycleStatus: "opens_later",
     deadlineNote:
-      "The Bangladesh application window has historically run ~April–June each year, announced by U.S. Embassy Dhaka. Exact current-cycle dates must be confirmed from the Embassy's announcement — do not rely on last year's date.",
+      "The Bangladesh application window has historically run ~April–June each year, announced by U.S. Embassy Dhaka. Exact current-cycle dates must be confirmed from the Embassy's announcement — do not rely on last year's date. NOTE (repair audit): the master's/PhD degree scope here follows the global Fulbright Foreign Student description; the Bangladesh call's own degree coverage could not be re-verified in this build environment (Embassy page unreachable) and is pending recheck against the actual country announcement.",
     deadlines: [
       {
         id: "fulbright-bd-window",
@@ -412,7 +412,7 @@ export const US_OPPORTUNITIES: Opportunity[] = [
       src("fulbright-bd", "https://bd.usembassy.gov/education-culture/fulbright-foreign-student-program/", "Fulbright Foreign Student Program — Bangladesh", "U.S. Embassy Dhaka"),
       src("educationusa-fin-grad", "https://educationusa.state.gov/your-5-steps-us-study/finance-your-studies/graduate", "Graduate financing orientation", "EducationUSA"),
     ],
-    reviewState: "baseline_review",
+    reviewState: "pending_recheck",
     retrievedAt: BASELINE,
   },
   {

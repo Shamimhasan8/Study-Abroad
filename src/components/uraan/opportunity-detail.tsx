@@ -497,7 +497,7 @@ export function OpportunityDetailView() {
               ))}
             </ul>
             <p className="mt-3 text-xs text-muted-foreground">
-              {t("detail.reviewState")}: {t(opportunity.reviewState === "baseline_review" ? "review.baseline" : opportunity.reviewState === "verified_current" ? "review.verified" : "review.stale")} · {t("detail.officialNote")}
+              {t("detail.reviewState")}: {t(opportunity.reviewState === "baseline_review" ? "review.baseline" : opportunity.reviewState === "verified_current" ? "review.verified" : opportunity.reviewState === "pending_recheck" ? "review.pending" : "review.stale")} · {t("detail.officialNote")}
             </p>
           </AccordionContent>
         </AccordionItem>

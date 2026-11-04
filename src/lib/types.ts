@@ -70,7 +70,7 @@ export type CycleStatus =
   | "in_progress"
   | "rolling"
   | "unknown";
-export type ReviewState = "baseline_review" | "verified_current" | "stale";
+export type ReviewState = "baseline_review" | "verified_current" | "stale" | "pending_recheck";
 
 export interface SourceRef {
   key: string;
