@@ -436,7 +436,7 @@ function EducationStep({
   save: (partial: Partial<ProfileData>) => void;
 }) {
   const { t, lang } = useI18n();
-  const qualifications = data.qualifications;
+  const qualifications = data.qualifications.length > 0 ? data.qualifications : [{ level: "HSC", institution: "", scale: "", grades: "", year: "" }];
 
   const update = (idx: number, patch: Partial<Qualification>) => {
     const next = qualifications.map((q, i) => (i === idx ? { ...q, ...patch } : q));

@@ -62,12 +62,12 @@ export function ExploreView() {
       if (level !== "all" && o.level !== level) return false;
       if (cycle !== "all" && o.cycleStatus !== cycle) return false;
       if (query.trim()) {
-        const q = query.toLowerCase();
-        return (
-          o.title.toLowerCase().includes(q) ||
-          o.description.toLowerCase().includes(q) ||
-          (o.institution ?? "").toLowerCase().includes(q) ||
-          o.subjectAreas.some((s) => s.toLowerCase().includes(q))
+        const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+        return words.every((w) =>
+          o.title.toLowerCase().includes(w) ||
+          o.description.toLowerCase().includes(w) ||
+          (o.institution ?? "").toLowerCase().includes(w) ||
+          o.subjectAreas.some((s) => s.toLowerCase().includes(w)),
         );
       }
       return true;
