@@ -171,7 +171,9 @@ export function JourneyView() {
             {lang === "bn" ? "বর্তমান লক্ষ্য" : "Current goal"}
           </p>
           <h2 className="mt-1 text-lg font-semibold">
-            {goalOpportunity ? goalOpportunity.title : t("journey.noGoal")}
+            {goalOpportunity
+              ? (lang === "bn" && goalOpportunity.titleBn ? goalOpportunity.titleBn : goalOpportunity.title)
+              : t("journey.noGoal")}
           </h2>
           {goalOpportunity && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
