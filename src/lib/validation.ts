@@ -221,17 +221,55 @@ export const documentPurposeSchema = z.enum([
 ]);
 
 export function badRequest(message: string) {
-  return Response.json({ ok: false, error: message }, { status: 400 });
+  return Response.json({ ok: false, error: message }, { status: 400, headers: { "Cache-Control": "no-store" } });
 }
 
 export function unauthorized() {
-  return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  return Response.json({ ok: false, error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
 }
 
 export function notFound() {
-  return Response.json({ ok: false, error: "not_found" }, { status: 404 });
+  return Response.json({ ok: false, error: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+}
+
+/** Short opaque request ID for support/reference — never a secret. */
+export function newRequestId(): string {
+  return globalThis.crypto?.randomUUID?.().slice(0, 8) ?? String(Date.now()).slice(-8) + Math.floor(Math.random() * 1e4);
+}
+
+/**
+ * 503 envelope for dependency failures (database/storage unreachable).
+ * The client can show a retryable service state instead of a blank 500.
+ */
+export function serviceUnavailable() {
+  return Response.json(
+    { ok: false, error: "service_unavailable", requestId: newRequestId(), retryable: true },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export function serverError() {
-  return Response.json({ ok: false, error: "server_error" }, { status: 500 });
+  return Response.json(
+    { ok: false, error: "server_error", requestId: newRequestId(), retryable: true },
+    { status: 500, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+/**
+ * Wrap a data route: any thrown error becomes a sanitized 503 envelope with
+ * a request ID. No stack traces or driver messages ever reach the client.
+ */
+export async function dataRoute(handler: () => Promise<Response>): Promise<Response> {
+  try {
+    return await handler();
+  } catch {
+    return serviceUnavailable();
+  }
+}
+
+/** Public, deliberately cacheable JSON (bounded staleness only). */
+export function publicJson(data: unknown, maxAgeSeconds = 60) {
+  return Response.json({ ok: true, data }, {
+    headers: { "Cache-Control": `public, max-age=${maxAgeSeconds}` },
+  });
 }

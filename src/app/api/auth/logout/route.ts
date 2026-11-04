@@ -1,6 +1,9 @@
 import { destroySession } from "@/lib/identity/auth";
+import { dataRoute } from "@/lib/validation";
 
 export async function POST() {
-  await destroySession();
-  return Response.json({ ok: true, data: {} });
+  return dataRoute(async () => {
+    await destroySession();
+    return Response.json({ ok: true, data: {} }, { headers: { "Cache-Control": "no-store" } });
+  });
 }

@@ -1,12 +1,14 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
+import { dataRoute } from "@/lib/validation";
 import type { PlanData, ProfileData, PlanTask } from "@/lib/types";
 
 /** Hydrate the client store for a signed-in user. Guests get empty state. */
 export async function GET() {
+  return dataRoute(async () => {
   const user = await getCurrentUser();
   if (!user) {
-    return Response.json({ ok: true, data: { user: null } });
+    return Response.json({ ok: true, data: { user: null } }, { headers: { "Cache-Control": "no-store" } });
   }
 
   const [profileRow, goalRow, shortlistRows, applicationRows] = await Promise.all([
@@ -77,5 +79,6 @@ export async function GET() {
         updatedAt: a.updatedAt.toISOString(),
       })),
     },
+  }, { headers: { "Cache-Control": "no-store" } });
   });
 }

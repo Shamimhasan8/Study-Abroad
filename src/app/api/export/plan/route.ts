@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
-import { unauthorized } from "@/lib/validation";
+import { dataRoute, unauthorized } from "@/lib/validation";
 
 /** Readable plan export (markdown) for printing or sharing with family. */
 export async function GET() {
+  return dataRoute(async () => {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
 
@@ -50,6 +51,8 @@ export async function GET() {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
       "Content-Disposition": 'attachment; filename="uraan-plan.md"',
+      "Cache-Control": "no-store",
     },
+  });
   });
 }

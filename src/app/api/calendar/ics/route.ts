@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { buildICS, type IcsEvent } from "@/lib/dates";
-import { unauthorized } from "@/lib/validation";
+import { dataRoute, unauthorized } from "@/lib/validation";
 
 /**
  * Calendar export (.ics) — all-day events only. Date-only precision is
  * preserved; no time or timezone is ever invented.
  */
 export async function GET() {
+  return dataRoute(async () => {
   const user = await getCurrentUser();
   if (!user) return unauthorized();
 
@@ -62,6 +63,8 @@ export async function GET() {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'attachment; filename="uraan-calendar.ics"',
+      "Cache-Control": "no-store",
     },
+  });
   });
 }
