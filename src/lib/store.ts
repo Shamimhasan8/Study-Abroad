@@ -49,6 +49,9 @@ interface AppState {
   // identity
   user: SessionUser | null;
 
+  // guest→account merge idempotency key (persisted; one per snapshot)
+  importId: string | null;
+
   // domain state
   profile: ProfileData | null;
   plan: PlanData | null;
@@ -64,6 +67,8 @@ interface AppState {
   clearCompare: () => void;
 
   setUser: (user: SessionUser | null) => void;
+  ensureImportId: () => string;
+  clearImportId: () => void;
   setProfile: (profile: ProfileData | null) => void;
   patchProfile: (partial: Partial<ProfileData>) => void;
 
@@ -96,6 +101,8 @@ export const useAppStore = create<AppState>()(
 
       user: null,
 
+      importId: null,
+
       profile: null,
       plan: null,
       goalSlug: null,
@@ -120,6 +127,19 @@ export const useAppStore = create<AppState>()(
       clearCompare: () => set({ compareSlugs: [] }),
 
       setUser: (user) => set({ user }),
+
+      ensureImportId: () => {
+        const existing = get().importId;
+        if (existing) return existing;
+        const generated =
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `imp-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        set({ importId: generated });
+        return generated;
+      },
+
+      clearImportId: () => set({ importId: null }),
 
       setProfile: (profile) => set({ profile }),
 
@@ -191,6 +211,7 @@ export const useAppStore = create<AppState>()(
       // Persist only durable domain state — navigation and identity are
       // re-derived on load (session from cookie, view starts at home).
       partialize: (state) => ({
+        importId: state.importId,
         profile: state.profile,
         plan: state.plan,
         goalSlug: state.goalSlug,

@@ -67,6 +67,10 @@ export const profileSchema = z.object({
 export type ProfileInput = z.infer<typeof profileSchema>;
 
 export const mergeGuestSchema = z.object({
+  /** Client-generated idempotency key — one per guest data snapshot. */
+  importId: z.string().min(8).max(64),
+  /** Retry with this flag only after the user saw and accepted a 409 conflict preview. */
+  confirmReplace: z.boolean().default(false),
   profile: profileSchema.nullable().optional(),
   plan: z
     .object({
