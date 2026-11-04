@@ -137,6 +137,7 @@ model Source {
   createdAt  DateTime @default(now())
 
   versions SourceVersion[]
+  facts    FactEvidence[]
 }
 
 /// One row per fetch attempt: durable run history, health, and hashes.
