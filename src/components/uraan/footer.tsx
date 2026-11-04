@@ -1,12 +1,13 @@
 "use client";
 
 /** Uraan footer — honest coverage disclosure, always at the bottom. */
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCoverageLine } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { PaperPlaneMark } from "./illustrations";
 
 export function UraanFooter() {
   const { t } = useI18n();
+  const coverage = useCoverageLine("footer.coverage", "home.coverageZero");
   const navigate = useAppStore((s) => s.navigate);
 
   return (
@@ -18,7 +19,7 @@ export function UraanFooter() {
             <div>
               <p className="text-sm font-semibold">{t("app.name")} · {t("app.tagline")}</p>
               <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                {t("footer.coverage")}
+                {coverage}
               </p>
               <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
                 {t("footer.honesty")}

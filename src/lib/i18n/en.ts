@@ -28,6 +28,8 @@ export const en = {
   "common.dontKnow": "I don't know yet",
   "common.retry": "Retry",
   "common.error": "Something went wrong",
+  "common.coverageLoading": "Checking live coverage…",
+  "common.coverageUnavailable": "Coverage numbers are unavailable right now — the catalogue service did not answer. Browsing still works.",
   "common.errorHint": "Your data is safe. Please try again.",
   "common.empty": "Nothing here yet",
   "common.remove": "Remove",
@@ -99,7 +101,8 @@ export const en = {
   "home.step2Body": "We check documented requirements from official sources against your background. Missing pieces are shown as missing — never assumed.",
   "home.step3Title": "Follow a real plan",
   "home.step3Body": "A 12–24 month preparation plan with weekly actions, funding-gap math, and deadline tracking that survives you coming back later.",
-  "home.coverageNote": "Current verified coverage: United States, Germany, Japan · bachelor's, master's, and PhD routes · 11 real opportunities.",
+  "home.coverageNote": "Current verified coverage: United States, Germany, Japan · bachelor's, master's, and PhD routes · {count} real opportunities.",
+  "home.coverageZero": "Current verified coverage: United States, Germany, Japan · no published opportunities right now — check back soon.",
   "home.guestStart": "No sign-in needed to start — explore first, save later.",
 
   // Onboarding
@@ -474,7 +477,7 @@ export const en = {
   "sources.methodTitle": "Methodology",
   "sources.methodBody": "Facts come from official pages in a fixed authority order: programme pages and official calls first, then admissions and aid offices, then governments, embassies, and administrators; general orientation material is labelled as general. Every decision-relevant fact carries its source link, retrieval date, and review state. An HTTP 200 is not verification — a human review step is.",
   "sources.coverageTitle": "What's covered now",
-  "sources.coverageBody": "United States, Germany, Japan · bachelor's, master's, PhD · 11 distinct real opportunities from official sources. Routes outside this coverage are marked as outside verified coverage — we do not generate rules for them.",
+  "sources.coverageBody": "United States, Germany, Japan · bachelor's, master's, PhD · {count} distinct real opportunities from official sources. Routes outside this coverage are marked as outside verified coverage — we do not generate rules for them.",
   "sources.reportTitle": "Report an error",
   "sources.reportBody": "Found a wrong fact or a dead link? Open an issue on the repository or use the in-app report button. Corrections go through editorial review — nothing changes silently.",
   "sources.freshnessTitle": "Freshness",
@@ -514,7 +517,7 @@ export const en = {
   "settings.deleteWarn": "Deletes your profile, plans, drafts, applications, and documents. Public source facts are unaffected.",
 
   // Footer
-  "footer.coverage": "Verified coverage: US · Germany · Japan — 11 opportunities across bachelor's, master's, and PhD routes.",
+  "footer.coverage": "Verified coverage: US · Germany · Japan — {count} opportunities across bachelor's, master's, and PhD routes.",
   "footer.honesty": "Uraan explains requirements and plans. It never promises admission, scholarships, or visas.",
   "footer.links": "Sources & methodology",
   "footer.privacy": "Data policy",

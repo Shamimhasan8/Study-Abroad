@@ -1,7 +1,7 @@
 "use client";
 
 /** Home view — one-sentence outcome, dual CTAs, honest coverage. */
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCoverageLine } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { Compass, Route } from "lucide-react";
 
 export function HomeView() {
   const { t } = useI18n();
+  const coverageNote = useCoverageLine("home.coverageNote", "home.coverageZero");
   const { navigate, profile, plan } = useAppStore();
 
   const hasProgress = Boolean(profile?.onboardingCompleted || plan);
@@ -72,7 +73,7 @@ export function HomeView() {
       {/* Coverage note */}
       <section aria-label={t("sources.coverageTitle")} className="mt-8">
         <Badge variant="outline" className="max-w-full whitespace-normal break-words border-leaf/40 bg-accent px-3 py-1.5 text-xs font-normal leading-relaxed text-foreground/80">
-          {t("home.coverageNote")}
+          {coverageNote}
         </Badge>
       </section>
 

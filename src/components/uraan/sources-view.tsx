@@ -5,7 +5,7 @@
  * and the honest error-report path.
  */
 import { useEffect, useState } from "react";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, useCoverageLine } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ interface Guide {
 
 export function SourcesView() {
   const { t, lang } = useI18n();
+  const coverageBody = useCoverageLine("sources.coverageBody", "home.coverageZero");
   const [guides, setGuides] = useState<Guide[] | null>(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export function SourcesView() {
         <Card className="border-border/70 bg-card">
           <CardContent className="p-5">
             <h2 className="mb-2 text-base font-semibold tracking-tight">{t("sources.coverageTitle")}</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">{t("sources.coverageBody")}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">{coverageBody}</p>
           </CardContent>
         </Card>
 

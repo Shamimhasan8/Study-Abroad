@@ -61,6 +61,10 @@ interface AppState {
   // guest→account merge idempotency key (persisted; one per snapshot)
   importId: string | null;
 
+  /** Live catalogue stats — derived, never hardcoded. status distinguishes
+   * loading / ok / error so UI copy can degrade honestly. */
+  stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" };
+
   // domain state
   profile: ProfileData | null;
   plan: PlanData | null;
@@ -78,6 +82,7 @@ interface AppState {
   setUser: (user: SessionUser | null) => void;
   syncOwner: (user: SessionUser | null) => void;
   setHydrated: (hydrated: boolean) => void;
+  setStats: (stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" }) => void;
   ensureImportId: () => string;
   clearImportId: () => void;
   setProfile: (profile: ProfileData | null) => void;
@@ -116,6 +121,8 @@ export const useAppStore = create<AppState>()(
       hydrated: false,
 
       importId: null,
+
+      stats: { opportunities: null, sources: null, status: "loading" },
 
       profile: null,
       plan: null,
@@ -167,6 +174,8 @@ export const useAppStore = create<AppState>()(
       },
 
       setHydrated: (hydrated) => set({ hydrated }),
+
+      setStats: (stats) => set({ stats }),
 
       ensureImportId: () => {
         const existing = get().importId;

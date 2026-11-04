@@ -74,6 +74,25 @@ function Shell() {
         useAppStore.getState().syncOwner(null);
         finish();
       }
+      // Live catalogue stats (non-blocking): coverage counts in copy are
+      // derived from data, never hardcoded.
+      void (async () => {
+        try {
+          const res = await fetch("/api/health");
+          const json = await res.json().catch(() => null);
+          if (res.ok && json?.ok) {
+            useAppStore.getState().setStats({
+              opportunities: Number(json.data?.opportunities ?? 0),
+              sources: Number(json.data?.sources ?? 0),
+              status: "ok",
+            });
+          } else {
+            useAppStore.getState().setStats({ opportunities: null, sources: null, status: "error" });
+          }
+        } catch {
+          useAppStore.getState().setStats({ opportunities: null, sources: null, status: "error" });
+        }
+      })();
     })();
     return () => {
       cancelled = true;

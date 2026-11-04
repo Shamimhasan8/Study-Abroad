@@ -16,6 +16,7 @@ import {
 } from "react";
 import { en, type TranslationKey } from "./en";
 import { bn } from "./bn";
+import { useAppStore } from "@/lib/store";
 
 export type Language = "en" | "bn";
 
@@ -85,4 +86,28 @@ export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
   if (!ctx) throw new Error("useI18n must be used inside I18nProvider");
   return ctx;
+}
+
+/** Bengali numerals for Bangla UI (10 → ১০). */
+export function localizeDigits(n: number, lang: Language): string {
+  const s = String(n);
+  if (lang !== "bn") return s;
+  const bnDigits = "০১২৩৪৫৬৭৮৯";
+  return s.replace(/\d/g, (d) => bnDigits[Number(d)]);
+}
+
+/**
+ * Coverage copy derived from LIVE catalogue stats (audited fix P0-2):
+ * loading / service failure / genuine zero / live count each render their
+ * own honest sentence — a hardcoded number can never outlive the data.
+ */
+export function useCoverageLine(noteKey: TranslationKey, zeroKey?: TranslationKey): string {
+  const { t, lang } = useI18n();
+  const stats = useAppStore((s) => s.stats);
+  if (stats.status === "loading") return t("common.coverageLoading");
+  if (stats.status === "error" || stats.opportunities === null) {
+    return t("common.coverageUnavailable");
+  }
+  if (stats.opportunities === 0) return t(zeroKey ?? "home.coverageZero");
+  return t(noteKey, { count: localizeDigits(stats.opportunities, lang) });
 }
