@@ -215,6 +215,7 @@ export type TaskCategory =
   | "language"
   | "tests"
   | "academic"
+  | "experience"
   | "writing"
   | "recommenders"
   | "funding"

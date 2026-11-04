@@ -446,6 +446,7 @@ export const en = {
   "plan.task.language": "Language",
   "plan.task.tests": "Tests",
   "plan.task.academic": "Academics",
+  "plan.task.experience": "Experience",
   "plan.task.writing": "Writing",
   "plan.task.recommenders": "Recommenders",
   "plan.task.funding": "Funding",

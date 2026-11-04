@@ -427,6 +427,7 @@ export const bn: Record<TranslationKey, string> = {
   "plan.task.language": "ভাষা",
   "plan.task.tests": "টেস্ট",
   "plan.task.academic": "পড়াশোনা",
+  "plan.task.experience": "অভিজ্ঞতা",
   "plan.task.writing": "লেখা",
   "plan.task.recommenders": "রেকমেন্ডার",
   "plan.task.funding": "ফান্ডিং",
