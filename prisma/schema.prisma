@@ -1,0 +1,121 @@
+// Uraan — Prisma schema (SQLite in this environment; portable to Postgres).
+//
+// Conventions:
+// - Statuses are explicit strings — `unknown` is a real value, never an
+//   overloaded null.
+// - Nested, sparse onboarding/catalogue shapes use JSON text columns
+//   validated by Zod at every boundary (documented in ARCHITECTURE.md).
+// - Date-only user dates (task due dates, test dates) are ISO strings so
+//   date-only precision is preserved. Server timestamps are DateTime.
+// - Every private entity carries userId with ownership enforced in API routes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== Identity & profile =====
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String?
+  role         String   @default("student") // student | admin
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions     Session[]
+  profile      Profile?
+  shortlist    ShortlistItem[]
+  goals        Goal[]
+  applications Application[]
+  documents    PrivateDocument[]
+  drafts       WritingDraft[]
+  experiences  ExperienceEntry[]
+  recommenders RecommenderRequest[]
+  research     ResearchNote?
+  languageLogs LanguageLogEntry[]
+  aiRuns       AiRun[]
+  notifications NotificationEvent[]
+  reviewEvents ReviewEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Full onboarding profile as a Zod-validated JSON document (ProfileData).
+/// One row per user; updated atomically on profile save.
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ===== Catalogue =====
+
+/// Destination guides (US, Germany, Japan) with official-source links.
+model CountryGuide {
+  id          String   @id @default(cuid())
+  code        String   @unique // US | DE | JP
+  nameEn      String
+  nameBn      String
+  contentEn   String   // markdown-ish guide body
+  contentBn   String
+  sourcesJson String   // SourceRef[]
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+/// Opportunities: funding schemes and specific university programmes.
+/// Requirement/deadline/cost/funding arrays are Zod-validated JSON columns.
+model Opportunity {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  kind          String // funding_scheme | programme
+  level         String // bachelor | master | phd | master_phd
+  title         String
+  titleBn       String?
+  country       String
+  countryLabel  String
+  institution   String?
+  subjectAreasJson String // string[]
+  routeNote     String
+  routeNoteBn   String?
+  description   String
+  descriptionBn String?
+  fundingType   String
+  applyUrl      String
+  cycleYear     Int?
+  cycleStatus   String // open | opens_later | closed | in_progress | rolling | unknown
+  deadlineNote  String
+  deadlinesJson   String // DeadlineEvent[]
+  requirementsJson String // RequirementRule[]
+  costsJson        String // CostItem[]
+  fundingJson      String // FundingItem[]
+  exclusionsJson   String // string[]
+  sourcesJson      String // SourceRef[]
+  reviewState    String // baseline_review | verified_current | stale
+  retrievedAt    DateTime
+  nextReviewAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([country])
+  @@index([level])
+}
