@@ -210,13 +210,19 @@ export function JourneyView() {
                 <span className="text-muted-foreground">{t("journey.tasksDone", { done: doneCount, total: tasks.length })}</span>
               </div>
               <Progress value={tasks.length ? (doneCount / tasks.length) * 100 : 0} aria-label={t("journey.progress")} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("plan.horizon")}: {t("plan.months", { n: String(plan.horizonMonths) })} · {t("common.lastSaved")}: {plan.generatedAt.slice(0, 10)}
+              </p>
               {currentPhase && (
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("journey.phase")}: <span className="font-semibold text-foreground/80">{currentPhase}</span>
                   {plan.infeasible && (
                     <span className="ml-2 font-semibold text-coral">⚠ {t("plan.infeasible")}</span>
                   )}
                 </p>
+              )}
+              {plan.feasibilityNote && (
+                <p className="mt-1 rounded-lg bg-accent p-2 text-xs leading-relaxed text-foreground/75">{plan.feasibilityNote}</p>
               )}
               <p className="mt-1 text-xs text-muted-foreground">{t("plan.progressSaved")}</p>
             </div>
