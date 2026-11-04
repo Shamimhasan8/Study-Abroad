@@ -20,18 +20,26 @@ pixels, cross-account visibility, AI training claims on your essays.
 
 ## Where data lives
 
-- Registered users: application database (SQLite in this environment) on the
-  server, plus private document files under `db/private-docs/`.
+- Registered users: the application database — **SQLite in this development
+  environment; managed PostgreSQL (e.g. Supabase) in production** (see
+  `docs/DEPLOYMENT.md`). Documents live in private, owner-scoped object
+  storage in production (a private bucket; downloads flow only through the
+  authenticated, ownership-checked API). In development only, the local
+  filesystem adapter stores them under `db/private-docs/`.
 - Guests: **browser local storage only** until you create an account; nothing
   about a guest reaches the server except anonymous API reads of the public
-  catalogue. Creating an account merges your guest plan explicitly and once.
+  catalogue. Creating an account merges your guest plan explicitly and once
+  (idempotent, with a conflict preview if the account already has a plan).
 - Sessions: opaque random tokens in httpOnly cookies; password hashes use
   scrypt with per-user salts. Passwords are never stored or logged in
-  readable form.
+  readable form. Failed logins are throttled durably (8 failures per 15
+  minutes per email).
+- Guest→account merges are recorded in a `GuestImport` ledger with receipts;
+  upload deletions leave only a tombstone (name, sizes, timestamps).
 
 ## What the AI provider receives
 
-Two server-side AI features exist:
+Three server-side AI features exist:
 
 1. **Plan explanation / requirement-gap explanation.** Receives: your
    language preference and a summarized, non-identifying snapshot of your
@@ -42,6 +50,14 @@ Two server-side AI features exist:
    without the text is impossible. The text is processed for the response and
    not persisted with the AI run record (only sanitized metadata: purpose,
    model, token counts, latency, status).
+3. **Language practice feedback.** Receives: your practice paragraph and the
+   fixed practice prompt. Guests are quota-bucketed by a short IP prefix
+   (stored for quota accounting only); replies are schema-validated before
+   display. Template fallbacks (when the provider is unreachable) contain no
+   proficiency estimate — word counts are not an assessment.
+
+Every model reply passes strict output-schema validation; malformed replies
+fail visibly and never impersonate a successful AI response.
 
 Operational logs record errors and AI run metadata without essay text or
 personal documents. We do not claim zero provider retention or encryption we

@@ -18,12 +18,13 @@ official sources. See `docs/SOURCE_REGISTRY.md`.
 
 ## Stack
 
-- **Next.js 16 (App Router) + TypeScript** — single-page student interface + JSON API routes
-- **Prisma + SQLite** (portable to Postgres via `DATABASE_URL`)
-- **Tailwind CSS 4 + shadcn/ui** with the Uraan warm-paper design system
-- **First-party auth** — scrypt password hashing, httpOnly session cookies, server-side ownership checks
-- **AI via z-ai-web-dev-sdk (server-side only)** — evidence-bound explanations and draft feedback, with labelled template fallbacks
-- **Zod** boundary validation on every API route
+- **Next.js 16 (App Router) + TypeScript** — student interface with durable query-param routes + JSON API routes
+- **Prisma + SQLite** in development; **managed Postgres in production** (exact migration path: `docs/DEPLOYMENT.md`)
+- **Tailwind CSS 4 + shadcn/ui** — warm editorial studio design system (Fraunces display face, Noto Sans Bengali, EN/BN interface)
+- **Documents:** adapter-backed private storage — local filesystem in dev, Supabase object storage in production
+- **First-party auth** — scrypt hashing, httpOnly sessions, durable login throttling, CLI-only admin provisioning
+- **AI via z-ai-web-dev-sdk (server-side only)** — zod-validated structured outputs, per-user AND per-IP quotas, labelled template fallbacks
+- **Zod** boundary validation on every API route; **Vitest** regression suite for the deterministic engines
 
 Full design notes: `ARCHITECTURE.md` · product scope: `PRODUCT.md` ·
 privacy: `DATA_POLICY.md` · agent instructions: `AGENTS.md`.
@@ -48,6 +49,28 @@ bun prisma/seed.ts
 # 5. Start the dev server
 bun run dev                  # http://localhost:3000
 ```
+
+### Everyday commands
+
+```bash
+bun run test                 # Vitest regression suite (engines + schemas)
+bun run typecheck            # tsc --noEmit (the real type gate)
+bun run lint                 # ESLint
+
+bun run admin:audit          # list accounts + roles (spot suspicious grants)
+bun run admin:grant -- you@yourmail.com    # promote an existing account (trusted machine)
+bun run admin:revoke -- email             # demote
+bun run admin:sync-allowlist               # apply ADMIN_EMAILS to existing accounts
+
+bun prisma/seed.ts           # idempotent catalogue seed (never clobbers reviewed rows)
+```
+
+### Production
+
+Follow `docs/DEPLOYMENT.md` step by step (Supabase Postgres, private object
+storage, cron-secret ingestion, admin provisioning, post-deploy smoke
+checks). The dev environment's SQLite/file-storage defaults are refused in
+production with actionable errors — they never silently degrade.
 
 Lint: `bun run lint` · Typecheck: `bunx tsc --noEmit`.
 

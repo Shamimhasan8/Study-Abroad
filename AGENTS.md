@@ -34,14 +34,21 @@ Bangladeshi students (first release). Read this file before editing anything.
 
 ## Map of the repository
 
-- `src/app/` — the single-page student interface (all views nested) + API routes
+- `src/app/` — the single-page student interface (durable query-param routes:
+  `/?view=…&slug=…&tab=…&ids=…&dest=…&level=…&cycle=…&q=…`) + API routes
 - `src/lib/` — domain modules: identity, catalogue, matching, planning,
-  funding, ai adapter, documents, ingestion
-- `prisma/` — schema + seeds (SQLite)
+  funding, ai adapter, documents (storage adapters), editorial (field
+  registry), ingestion
+- `prisma/` — schema + seeds (SQLite in this dev environment; production
+  uses managed Postgres — see docs/DEPLOYMENT.md; a bare `DATABASE_URL` swap
+  does NOT migrate data)
+- `scripts/admin-grant.ts` — the ONLY admin provisioning path (owner-run CLI)
 - `src/components/uraan/` — product-specific UI (illustrations, header, views)
 - `src/components/ui/` — shadcn/ui primitives (do not hand-rewrite)
-- `docs/` — source registry, methodology notes, presentation outline
-- `db/` — SQLite database file and private document storage (gitignored)
+- `docs/` — source registry, repair audit, feature acceptance, release
+  checklist, deployment guide, methodology, presentation outline
+- `db/` — dev SQLite database + dev-only local document adapter (gitignored);
+  production documents live in private object storage (`DOCUMENTS_STORAGE`)
 
 ### Deterministic engines (never AI-overridden)
 
@@ -56,5 +63,30 @@ Bangladeshi students (first release). Read this file before editing anything.
 ## Environment notes
 
 The development sandbox maps the app to port 3000 and uses a Caddy gateway.
-The catalogue seed uses `prisma/seed.ts` run through Bun. See `README.md` for
-exact commands.
+The catalogue seed uses `prisma/seed.ts` run through Bun (idempotent — it
+never overwrites editorially reviewed rows). See `README.md` for exact
+commands.
+
+## Production assumptions (supersede the dev SQLite defaults)
+
+- **Database:** managed Postgres (Supabase recommended). Migrations via
+  `prisma migrate deploy`, NEVER `db push --accept-data-loss` on production.
+  Full path: `docs/DEPLOYMENT.md` step 1.
+- **Documents:** `DOCUMENTS_STORAGE=supabase` + private bucket; the local
+  filesystem adapter is refused implicitly in production.
+- **Admins:** granted ONLY through `bun run admin:grant` on a trusted
+  machine; `ADMIN_EMAILS` is advisory input for the CLI, ignored by request
+  paths. Public registration always creates a student.
+- **Scheduled ingestion:** Vercel Cron calls `POST /api/admin/ingestion`
+  with `Authorization: Bearer $INGESTION_CRON_SECRET`; human admins keep
+  their cookie path.
+- **Editorial publishing:** `PATCH /api/admin/review` writes real catalogue
+  values through the allowlisted field registry with optimistic-concurrency
+  versioning and full history (`OpportunityVersion`).
+
+## Tests
+
+`bun run test` (Vitest) covers the deterministic engines and boundary
+schemas — run it before every merge that touches `src/lib/matching`,
+`src/lib/planning`, `src/lib/funding`, `src/lib/money`,
+`src/lib/editorial`, or `src/lib/validation`.
