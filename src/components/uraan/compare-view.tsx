@@ -122,7 +122,7 @@ export function CompareView() {
                   o.level === "master" ? "explore.badge.master" :
                   o.level === "phd" ? "explore.badge.phd" : "explore.badge.master_phd"
                 ))}
-                {row(t("explore.kind.scheme") + "/" + t("explore.kind.programme"), (o) =>
+                {row(lang === "bn" ? "ধরন" : "Type", (o) =>
                   t(o.kind === "funding_scheme" ? "explore.kind.scheme" : "explore.kind.programme")
                 )}
                 {row(t("detail.funding"), (o) => (
