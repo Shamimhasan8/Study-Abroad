@@ -26,23 +26,23 @@ type CatalogueResponse = {
 export function ExploreView() {
   const { t, lang } = useI18n();
   const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare, profile, user } = useAppStore();
+  const { query, country, level, cycle } = useAppStore((s) => s.exploreFilters);
+  const setExploreFilters = useAppStore((s) => s.setExploreFilters);
 
   const [data, setData] = useState<CatalogueResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  const [query, setQuery] = useState("");
-  const [country, setCountry] = useState("all");
-  const [level, setLevel] = useState("all");
-  const [cycle, setCycle] = useState("all");
 
   // Pre-fill the destination filter once from onboarding preferences.
   // Degree level is NOT pre-filled: exact-level filtering would hide
   // combined master/PhD records from master's-seekers.
   useEffect(() => {
     if (profile?.countryPrefs?.length) {
-      setCountry((current) => (current === "all" ? profile.countryPrefs[0] : current));
+      if (useAppStore.getState().exploreFilters.country === "all") {
+        setExploreFilters({ country: profile.countryPrefs[0] });
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.countryPrefs]);
 
   const load = async () => {
@@ -66,18 +66,26 @@ export function ExploreView() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
+    // Level inclusion mirrors the API: master's/PhD include master_phd records.
+    const levelInclusion: Record<string, string[]> = {
+      bachelor: ["bachelor"],
+      master: ["master", "master_phd"],
+      phd: ["phd", "master_phd"],
+      master_phd: ["master_phd"],
+    };
     return data.opportunities.filter((o) => {
       if (country !== "all" && o.country !== country) return false;
-      if (level !== "all" && o.level !== level) return false;
+      if (level !== "all" && !(levelInclusion[level] ?? [level]).includes(o.level)) return false;
       if (cycle !== "all" && o.cycleStatus !== cycle) return false;
       if (query.trim()) {
         const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-        return words.every((w) =>
+        const matches = words.every((w) =>
           o.title.toLowerCase().includes(w) ||
           o.description.toLowerCase().includes(w) ||
           (o.institution ?? "").toLowerCase().includes(w) ||
           o.subjectAreas.some((s) => s.toLowerCase().includes(w)),
         );
+        if (!matches) return false;
       }
       return true;
     });
@@ -120,7 +128,7 @@ export function ExploreView() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 font-display text-[26px] font-bold tracking-tight sm:text-3xl">
           <Compass className="h-6 w-6 text-leaf" aria-hidden="true" />
           {t("explore.title")}
         </h1>
@@ -131,12 +139,12 @@ export function ExploreView() {
       <section aria-label="Filters" className="mb-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
         <Input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => setExploreFilters({ query: e.target.value })}
           placeholder={t("explore.search")}
           className="bg-card lg:col-span-2"
           aria-label={t("explore.search")}
         />
-        <Select value={country} onValueChange={setCountry}>
+        <Select value={country} onValueChange={(v) => setExploreFilters({ country: v })}>
           <SelectTrigger className="bg-card" aria-label={t("explore.filter.destination")}>
             <SelectValue />
           </SelectTrigger>
@@ -148,7 +156,7 @@ export function ExploreView() {
             <SelectItem value="EU">Europe (Erasmus)</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={level} onValueChange={setLevel}>
+        <Select value={level} onValueChange={(v) => setExploreFilters({ level: v })}>
           <SelectTrigger className="bg-card" aria-label={t("explore.filter.degree")}>
             <SelectValue />
           </SelectTrigger>
@@ -160,7 +168,7 @@ export function ExploreView() {
             <SelectItem value="master_phd">{levelLabel("master_phd")}</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={cycle} onValueChange={setCycle}>
+        <Select value={cycle} onValueChange={(v) => setExploreFilters({ cycle: v })}>
           <SelectTrigger className="bg-card" aria-label={t("explore.filter.cycle")}>
             <SelectValue />
           </SelectTrigger>
@@ -175,17 +183,62 @@ export function ExploreView() {
         </Select>
       </section>
 
-      {(country !== "all" || level !== "all" || cycle !== "all" || query) && (
-        <div className="mb-4">
-          <Button variant="ghost" size="sm" onClick={() => { setCountry("all"); setLevel("all"); setCycle("all"); setQuery(""); }}>
+      {/* Active filter chips + clear */}
+      {(country !== "all" || level !== "all" || cycle !== "all" || query.trim()) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {query.trim() && (
+            <button
+              onClick={() => setExploreFilters({ query: "" })}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-coral/60 hover:text-coral"
+            >
+              “{query.trim().slice(0, 24)}” ✕
+              <span className="sr-only"> {t("explore.clearFilters")}</span>
+            </button>
+          )}
+          {country !== "all" && (
+            <button
+              onClick={() => setExploreFilters({ country: "all" })}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-coral/60 hover:text-coral"
+            >
+              {country === "US" ? "United States" : country === "DE" ? "Germany" : country === "JP" ? "Japan" : "Europe"} ✕
+              <span className="sr-only"> {t("explore.clearFilters")}</span>
+            </button>
+          )}
+          {level !== "all" && (
+            <button
+              onClick={() => setExploreFilters({ level: "all" })}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-coral/60 hover:text-coral"
+            >
+              {levelLabel(level as Opportunity["level"])} ✕
+              <span className="sr-only"> {t("explore.clearFilters")}</span>
+            </button>
+          )}
+          {cycle !== "all" && (
+            <button
+              onClick={() => setExploreFilters({ cycle: "all" })}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-coral/60 hover:text-coral"
+            >
+              {cycleLabel(cycle as Opportunity["cycleStatus"])} ✕
+              <span className="sr-only"> {t("explore.clearFilters")}</span>
+            </button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setExploreFilters({ query: "", country: "all", level: "all", cycle: "all" })}
+          >
             {t("explore.clearFilters")}
           </Button>
         </div>
       )}
 
-      <p className="mb-4 text-sm font-medium text-muted-foreground" role="status">
-        {t("explore.results", { count: filtered.length })}
-      </p>
+      {/* Count only renders on settled data — never a confident zero while
+          a request is pending or the service failed (that is not "0 results"). */}
+      {!loading && !error && (
+        <p className="mb-4 text-sm font-medium text-muted-foreground" role="status">
+          {t("explore.results", { count: filtered.length })}
+        </p>
+      )}
 
       {/* Compare tray */}
       {compareSlugs.length > 0 && (

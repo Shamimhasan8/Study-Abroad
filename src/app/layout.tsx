@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -13,6 +13,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/** Editorial display face for English headings (soft-serif, warm, distinctive). */
+const fraunces = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+/** Real Bengali typeface with proper line metrics for the Bangla interface. */
+const notoBengali = Noto_Sans_Bengali({
+  variable: "--font-noto-bengali",
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Uraan — Study Abroad Preparation Workspace",
   description:
@@ -24,7 +40,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#FFF8EE",
+  themeColor: "#F8F6F0",
 };
 
 export default function RootLayout({
@@ -35,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${notoBengali.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
         {children}
         <Toaster />

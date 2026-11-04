@@ -1,13 +1,19 @@
 "use client";
 
 /**
- * Uraan single-page application shell.
- * All screens are coherent nested views switched client-side; the server
- * exposes only / plus JSON API routes.
+ * Uraan application shell.
+ *
+ * Navigation is durable-URL driven: every screen is addressable through
+ * query parameters on / (view, slug, tab, ids, dest, level, cycle, q —
+ * non-sensitive only; no personal profile data ever enters the URL).
+ * The hosting sandbox exposes a single app route, so this delivers deep
+ * links, refresh persistence, and back/forward history without multi-path
+ * routes; the owner's deployment can promote these to real paths later
+ * (documented in DEPLOYMENT.md).
  */
-import { useEffect, useState } from "react";
-import { I18nProvider } from "@/lib/i18n";
-import { useAppStore } from "@/lib/store";
+import { useEffect, useRef, useState } from "react";
+import { I18nProvider, useI18n } from "@/lib/i18n";
+import { useAppStore, type ExploreFilters, type PrepareTab, type View } from "@/lib/store";
 import { UraanHeader } from "@/components/uraan/header";
 import { UraanFooter } from "@/components/uraan/footer";
 import { HomeView } from "@/components/uraan/home-view";
@@ -24,10 +30,153 @@ import { SettingsView } from "@/components/uraan/settings-view";
 import { AdminView } from "@/components/uraan/admin-view";
 import { AuthDialog } from "@/components/uraan/auth-dialog";
 
+const VALID_VIEWS: View[] = [
+  "home", "onboarding", "journey", "explore", "detail", "compare",
+  "prepare", "applications", "calendar", "sources", "admin", "settings",
+];
+const VALID_TABS: PrepareTab[] = ["language", "experience", "writing", "recommenders", "research", "documents"];
+
+/** Build the canonical query string for the current navigation state. */
+function urlOf(state: {
+  view: View;
+  detailSlug: string | null;
+  prepareTab: PrepareTab;
+  compareSlugs: string[];
+  exploreFilters: ExploreFilters;
+}): string {
+  const params = new URLSearchParams();
+  params.set("view", state.view);
+  if (state.view === "detail" && state.detailSlug) params.set("slug", state.detailSlug);
+  if (state.view === "prepare" && state.prepareTab !== "language") params.set("tab", state.prepareTab);
+  if (state.view === "compare" && state.compareSlugs.length > 0) params.set("ids", state.compareSlugs.join(","));
+  if (state.view === "explore") {
+    const { query, country, level, cycle } = state.exploreFilters;
+    if (query) params.set("q", query);
+    if (country !== "all") params.set("dest", country);
+    if (level !== "all") params.set("level", level);
+    if (cycle !== "all") params.set("cycle", cycle);
+  }
+  const qs = params.toString();
+  return qs ? `/?${qs}` : "/";
+}
+
+/** Parse the URL into a navigation snapshot (invalid values ignored). */
+function stateOfUrl(): {
+  view: View;
+  detailSlug?: string | null;
+  prepareTab?: PrepareTab;
+  compareSlugs?: string[];
+  exploreFilters?: Partial<ExploreFilters>;
+} {
+  const params = new URLSearchParams(window.location.search);
+  const rawView = params.get("view") as View | null;
+  const view = rawView && VALID_VIEWS.includes(rawView) ? rawView : "home";
+  const snapshot: ReturnType<typeof stateOfUrl> = { view };
+  const slug = params.get("slug");
+  if (view === "detail" && slug && /^[a-z0-9-]{1,120}$/i.test(slug)) snapshot.detailSlug = slug;
+  const tab = params.get("tab") as PrepareTab | null;
+  if (view === "prepare" && tab && VALID_TABS.includes(tab)) snapshot.prepareTab = tab;
+  const ids = params.get("ids");
+  if (view === "compare" && ids) {
+    const slugs = ids.split(",").filter((s) => /^[a-z0-9-]{1,120}$/i.test(s)).slice(0, 3);
+    if (slugs.length > 0) snapshot.compareSlugs = slugs;
+  }
+  if (view === "explore") {
+    const filters: Partial<ExploreFilters> = {};
+    const q = params.get("q");
+    if (q && q.length <= 120) filters.query = q;
+    const dest = params.get("dest");
+    if (dest && /^[a-z]{2}$/i.test(dest)) filters.country = dest;
+    const level = params.get("level");
+    if (level && ["bachelor", "master", "phd", "master_phd"].includes(level)) filters.level = level;
+    const cycle = params.get("cycle");
+    if (cycle && ["open", "opens_later", "in_progress", "closed", "rolling", "archived", "unknown"].includes(cycle)) {
+      filters.cycle = cycle;
+    }
+    if (Object.keys(filters).length > 0) snapshot.exploreFilters = filters;
+  }
+  return snapshot;
+}
+
+const VIEW_TITLES: Record<View, string> = {
+  home: "app.name",
+  onboarding: "onboarding.title",
+  journey: "journey.title",
+  explore: "explore.title",
+  detail: "explore.title", // detail shows the opportunity name in-content
+  compare: "compare.title",
+  prepare: "prepare.title",
+  applications: "apps.title",
+  calendar: "cal.title",
+  sources: "sources.title",
+  admin: "admin.title",
+  settings: "settings.title",
+};
+
+/** URL ↔ store synchronization: deep links, back/forward, refresh survive. */
+function useUrlRouting() {
+  const { t } = useI18n();
+  const view = useAppStore((s) => s.view);
+  const detailSlug = useAppStore((s) => s.detailSlug);
+  const prepareTab = useAppStore((s) => s.prepareTab);
+  const compareSlugs = useAppStore((s) => s.compareSlugs);
+  const exploreFilters = useAppStore((s) => s.exploreFilters);
+  const applying = useRef(false);
+  const firstSync = useRef(true);
+
+  // Initial deep link: URL wins on first load.
+  useEffect(() => {
+    applying.current = true;
+    useAppStore.getState().applyFromUrl(stateOfUrl());
+    applying.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Store → URL: every navigation pushes a history entry (back/forward work).
+  // The very first sync REPLACES (no extra history entry on a fresh load).
+  useEffect(() => {
+    if (applying.current) return;
+    const next = urlOf({ view, detailSlug, prepareTab, compareSlugs, exploreFilters });
+    if (next !== window.location.pathname + window.location.search) {
+      if (firstSync.current) {
+        window.history.replaceState({}, "", next);
+      } else {
+        window.history.pushState({}, "", next);
+      }
+    }
+    firstSync.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, detailSlug, prepareTab, compareSlugs, exploreFilters]);
+
+  // URL ← browser: back/forward buttons re-apply the URL state to the store.
+  useEffect(() => {
+    const onPop = () => {
+      applying.current = true;
+      useAppStore.getState().applyFromUrl(stateOfUrl());
+      applying.current = false;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // Accurate per-view page titles.
+  useEffect(() => {
+    if (view === "home") {
+      document.title = "Uraan — Study Abroad Preparation Workspace";
+      return;
+    }
+    const key = VIEW_TITLES[view] ?? "app.name";
+    const title = t(key as Parameters<typeof t>[0]);
+    document.title = `${title} · Uraan`;
+  }, [view, t]);
+}
+
 function Shell() {
   const view = useAppStore((s) => s.view);
   const hydrated = useAppStore((s) => s.hydrated);
   const [authOpen, setAuthOpen] = useState(false);
+
+  useUrlRouting();
 
   // Startup contract (audited fix P1-2):
   // 1. Resolve the session FIRST — the shell stays a skeleton so no

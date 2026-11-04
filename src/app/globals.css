@@ -51,67 +51,71 @@
 }
 
 /*
- * Uraan design system — warm paper education product.
- * Tokens: Paper #FFF8EE · Deep green #163D36 · Leaf #317A62 ·
- * Coral #E86F51 · Sunflower #E9B949. Contrast checked for AA text.
+ * Uraan design system — warm editorial study-abroad studio.
+ * Tokens (repair-prompt palette, contrast-checked):
+ * Canvas #F8F6F0 · Surface #FFFFFF · Deep ink #173C35 ·
+ * Primary green #286B58 · Pale sage #E8EEE5 ·
+ * Coral #D96D51 · Warm yellow #E7BF63 · Border #E2E6DC.
+ * Display face: Fraunces (EN headings). Interface: Geist sans.
+ * Bangla: Noto Sans Bengali with roomier line height.
  */
 :root {
   --radius: 0.75rem;
-  --paper: #FFF8EE;
-  --deep: #163D36;
-  --leaf: #317A62;
-  --coral: #E86F51;
+  --paper: #F8F6F0;
+  --deep: #173C35;
+  --leaf: #286B58;
+  --coral: #D96D51;
   --coral-foreground: #FFFFFF;
-  --sunflower: #E9B949;
+  --sunflower: #E7BF63;
 
-  --background: #FFF8EE;
-  --foreground: #163D36;
-  --card: #FFFDF8;
-  --card-foreground: #163D36;
-  --popover: #FFFDF8;
-  --popover-foreground: #163D36;
-  --primary: #317A62;
-  --primary-foreground: #FFF8EE;
-  --secondary: #F3E9D7;
-  --secondary-foreground: #163D36;
-  --muted: #F5EDDE;
-  --muted-foreground: #5C6F62;
-  --accent: #FBEFD6;
-  --accent-foreground: #163D36;
+  --background: #F8F6F0;
+  --foreground: #173C35;
+  --card: #FFFFFF;
+  --card-foreground: #173C35;
+  --popover: #FFFFFF;
+  --popover-foreground: #173C35;
+  --primary: #286B58;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8EEE5;
+  --secondary-foreground: #173C35;
+  --muted: #F0F1EC;
+  --muted-foreground: #55655B;
+  --accent: #E8EEE5;
+  --accent-foreground: #173C35;
   --destructive: #B3362A;
-  --border: #E8DCC8;
-  --input: #E8DCC8;
-  --ring: #317A62;
-  --chart-1: #317A62;
-  --chart-2: #E86F51;
-  --chart-3: #E9B949;
-  --chart-4: #163D36;
+  --border: #E2E6DC;
+  --input: #E2E6DC;
+  --ring: #286B58;
+  --chart-1: #286B58;
+  --chart-2: #D96D51;
+  --chart-3: #E7BF63;
+  --chart-4: #173C35;
   --chart-5: #8FAE9F;
-  --sidebar: #FBF3E4;
-  --sidebar-foreground: #163D36;
-  --sidebar-primary: #317A62;
-  --sidebar-primary-foreground: #FFF8EE;
-  --sidebar-accent: #F3E9D7;
-  --sidebar-accent-foreground: #163D36;
-  --sidebar-border: #E8DCC8;
-  --sidebar-ring: #317A62;
+  --sidebar: #F1F2EC;
+  --sidebar-foreground: #173C35;
+  --sidebar-primary: #286B58;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E8EEE5;
+  --sidebar-accent-foreground: #173C35;
+  --sidebar-border: #E2E6DC;
+  --sidebar-ring: #286B58;
 }
 
 .dark {
-  --background: #122B26;
-  --foreground: #EDE6D2;
-  --card: #17342E;
-  --card-foreground: #EDE6D2;
-  --popover: #17342E;
-  --popover-foreground: #EDE6D2;
+  --background: #11251F;
+  --foreground: #ECEFE7;
+  --card: #18332B;
+  --card-foreground: #ECEFE7;
+  --popover: #18332B;
+  --popover-foreground: #ECEFE7;
   --primary: #6FB39A;
   --primary-foreground: #0F2420;
   --secondary: #1F4038;
-  --secondary-foreground: #EDE6D2;
+  --secondary-foreground: #ECEFE7;
   --muted: #1F4038;
   --muted-foreground: #A8B8AC;
   --accent: #27473C;
-  --accent-foreground: #EDE6D2;
+  --accent-foreground: #ECEFE7;
   --destructive: #E4705F;
   --border: #2A4A41;
   --input: #2A4A41;
@@ -141,14 +145,31 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "ss01" on;
+    font-size: 16px;
   }
+  /* Editorial display face for headings (English); Fraunces via next/font */
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+  /* Bangla interface: real Bengali typeface with proper line metrics */
   body:lang(bn),
   [lang="bn"] {
-    font-family: var(--font-bengali);
-    line-height: 1.7;
+    font-family: var(--font-noto-bengali), "Noto Sans Bengali", "Hind Siliguri", "SolaimanLipi", "Nirmala UI", "Bangla MN", sans-serif;
+    line-height: 1.75;
   }
-  /* Bengali text renders slightly larger; nudge sizes for readability */
-  :lang(bn) h1 { line-height: 1.3; }
+  /* Bengali headings keep display warmth through the Bengali face */
+  :lang(bn) .font-display {
+    font-family: var(--font-noto-bengali), "Noto Sans Bengali", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  :lang(bn) h1 { line-height: 1.35; }
+  /* Touch-friendly form minimums: inputs never drop below 16px */
+  input, textarea, select {
+    font-size: max(1rem, 0.875rem);
+  }
 }
 
 /* Custom scrollbar — warm, subtle */

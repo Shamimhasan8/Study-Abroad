@@ -42,7 +42,7 @@ export function SourcesView() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 font-display text-[26px] font-bold tracking-tight sm:text-3xl">
           <BookCheck className="h-6 w-6 text-leaf" aria-hidden="true" />
           {t("sources.title")}
         </h1>

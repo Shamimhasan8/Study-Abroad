@@ -39,6 +39,13 @@ export type PrepareTab =
   | "research"
   | "documents";
 
+export type ExploreFilters = {
+  query: string;
+  country: string;
+  level: string;
+  cycle: string;
+};
+
 interface AppState {
   // transient navigation
   view: View;
@@ -72,12 +79,16 @@ interface AppState {
   shortlist: string[];
   applications: ApplicationRecord[];
   evaluations: Record<string, EvaluationSummary>;
+  exploreFilters: ExploreFilters;
 
   // actions
   navigate: (view: View, detailSlug?: string) => void;
   setPrepareTab: (tab: PrepareTab) => void;
   toggleCompare: (slug: string) => void;
   clearCompare: () => void;
+  setExploreFilters: (filters: Partial<ExploreFilters>) => void;
+  /** Apply a full state snapshot from the URL (deep link / back / forward). */
+  applyFromUrl: (state: { view: View; detailSlug?: string | null; prepareTab?: PrepareTab; compareSlugs?: string[]; exploreFilters?: Partial<ExploreFilters> }) => void;
 
   setUser: (user: SessionUser | null) => void;
   syncOwner: (user: SessionUser | null) => void;
@@ -130,6 +141,7 @@ export const useAppStore = create<AppState>()(
       shortlist: [],
       applications: [],
       evaluations: {},
+      exploreFilters: { query: "", country: "all", level: "all", cycle: "all" },
 
       navigate: (view, detailSlug) =>
         set({ view, detailSlug: detailSlug ?? (view === "detail" ? get().detailSlug : null) }),
@@ -146,6 +158,18 @@ export const useAppStore = create<AppState>()(
       },
 
       clearCompare: () => set({ compareSlugs: [] }),
+
+      setExploreFilters: (filters) =>
+        set({ exploreFilters: { ...get().exploreFilters, ...filters } }),
+
+      applyFromUrl: (state) =>
+        set({
+          view: state.view,
+          detailSlug: state.detailSlug ?? null,
+          prepareTab: state.prepareTab ?? get().prepareTab,
+          compareSlugs: state.compareSlugs ?? get().compareSlugs,
+          exploreFilters: { ...get().exploreFilters, ...(state.exploreFilters ?? {}) },
+        }),
 
       setUser: (user) => set({ user }),
 

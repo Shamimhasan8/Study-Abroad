@@ -65,7 +65,7 @@ export function CompareView() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <h1 className="flex items-center gap-2 font-display text-[26px] font-bold tracking-tight sm:text-3xl">
           <Scale className="h-6 w-6 text-leaf" aria-hidden="true" />
           {t("compare.title")}
         </h1>

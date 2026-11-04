@@ -51,7 +51,7 @@ export function PrepareView() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <header className="uraan-fade-up">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="font-display text-[26px] font-bold tracking-tight sm:text-3xl sm:text-3xl">
           {t("prepare.title")}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">

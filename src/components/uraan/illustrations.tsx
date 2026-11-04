@@ -124,3 +124,117 @@ export function StatusDot({ width = 12, height = 12, ...props }: IllusProps) {
     </svg>
   );
 }
+
+/**
+ * The composed hero scene: a student preparing at a desk, an unfolding
+ * route map, and a paper plane flying toward a distant goal. Original
+ * code-native vector art in the studio palette (Canvas #F8F6F0, Ink
+ * #173C35, Green #286B58, Sage #E8EEE5, Coral #D96D51, Yellow #E7BF63).
+ * Decorative only — aria-hidden; meaning never depends on artwork.
+ */
+export function HeroScene({ width = 560, height = 420, className = "", ...props }: IllusProps) {
+  return (
+    <svg
+      viewBox="0 0 560 420"
+      width={width}
+      height={height}
+      role="img"
+      aria-label="A student preparing at a desk beside an unfolding route map, with a paper plane flying toward a goal"
+      className={className}
+      {...props}
+    >
+      {/* backdrop */}
+      <rect x="0" y="0" width="560" height="420" rx="24" fill="#F1F2EC" />
+      <circle cx="468" cy="84" r="46" fill="#E8EEE5" />
+      <circle cx="468" cy="84" r="30" fill="#E7BF63" opacity="0.55" />
+
+      {/* distant goal hill + flag */}
+      <path d="M330 150c26-34 66-52 118-38 34 9 58 20 78 38v14H330Z" fill="#DCE5DB" />
+      <path d="M526 112V70" stroke="#173C35" strokeWidth="4" strokeLinecap="round" />
+      <path d="M526 70c16 4 28 10 34 18-10 6-22 8-34 6Z" fill="#D96D51" />
+
+      {/* dashed flight path */}
+      <path d="M86 236C160 210 236 176 300 140c26-14 52-24 84-28" fill="none" stroke="#286B58" strokeWidth="3" strokeLinecap="round" strokeDasharray="2 10" />
+
+      {/* the paper plane */}
+      <g transform="translate(320 118) rotate(-18)">
+        <path d="M0 0 44 12 12 30Z" fill="#286B58" />
+        <path d="M0 0 44 12 14 14Z" fill="#D96D51" opacity="0.92" />
+        <path d="M14 14 12 30 22 18Z" fill="#173C35" opacity="0.8" />
+      </g>
+
+      {/* unfolding route map on the desk */}
+      <g transform="translate(288 208) rotate(6)">
+        <path d="M10 84C-6 52 2 18 38 6c30-10 74-4 104 10 26 12 34 44 20 66-16 24-58 34-96 26-24-5-42-12-56-24Z" fill="#FFFFFF" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M22 72C12 48 20 24 48 16c24-7 60-2 84 9" fill="none" stroke="#286B58" strokeWidth="3" strokeLinecap="round" strokeDasharray="1 9" />
+        <circle cx="44" cy="66" r="7" fill="#E7BF63" />
+        <circle cx="96" cy="28" r="7" fill="#D96D51" />
+        <path d="M116 84l20 16" stroke="#E2E6DC" strokeWidth="2" strokeLinecap="round" />
+      </g>
+
+      {/* desk */}
+      <rect x="24" y="300" width="286" height="16" rx="8" fill="#173C35" />
+      <rect x="52" y="316" width="12" height="76" rx="6" fill="#286B58" />
+      <rect x="270" y="316" width="12" height="76" rx="6" fill="#286B58" />
+
+      {/* open book on desk */}
+      <g transform="translate(56 258)">
+        <path d="M4 42C24 30 52 30 72 42v0C52 54 24 54 4 42Z" fill="#FFFFFF" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M76 42C96 30 124 30 144 42c-20 12-48 12-68 0Z" fill="#FFFFFF" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M76 42v0" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M14 40c14-8 32-8 46 0M86 40c14-8 32-8 46 0" stroke="#C9D3C6" strokeWidth="2" strokeLinecap="round" />
+      </g>
+
+      {/* steaming cup */}
+      <g transform="translate(246 262)">
+        <path d="M0 10h30v18a10 10 0 0 1-10 10h-10A10 10 0 0 1 0 28Z" fill="#FFFFFF" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M30 14h8a8 8 0 0 1 0 16h-8" fill="none" stroke="#E2E6DC" strokeWidth="2" />
+        <path d="M8 2c4-4-4-8 0-12M18 2c4-4-4-8 0-12" stroke="#C9D3C6" strokeWidth="2" strokeLinecap="round" fill="none" />
+      </g>
+
+      {/* the student */}
+      <g transform="translate(116 148)">
+        {/* chair back */}
+        <rect x="6" y="84" width="14" height="120" rx="7" fill="#286B58" opacity="0.35" />
+        {/* torso leaning slightly forward */}
+        <path d="M18 210c-10-34-6-66 10-92 10-16 30-24 50-18 18 6 26 22 24 40-2 22-10 44-22 62-8 12-16 18-26 20Z" fill="#286B58" />
+        {/* neck + head */}
+        <rect x="56" y="86" width="18" height="26" rx="9" fill="#E8B48C" />
+        <circle cx="70" cy="66" r="30" fill="#E8B48C" />
+        {/* hair */}
+        <path d="M40 62c-2-24 14-40 36-38 20 2 32 16 30 34-2 10-8 16-16 18 2-12-4-20-14-22-12-2-22 2-26 12-4-2-8-2-10-4Z" fill="#173C35" />
+        {/* focused eye + smile */}
+        <circle cx="82" cy="66" r="3.4" fill="#173C35" />
+        <path d="M78 80c4 3 10 3 14 0" stroke="#173C35" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        {/* arm reaching to the book */}
+        <path d="M34 140c14 8 30 14 48 16 8 1 14 6 14 14 0 6-6 10-12 8-22-6-40-14-54-24Z" fill="#286B58" />
+        <circle cx="96" cy="172" r="8" fill="#E8B48C" />
+        {/* arm to laptop */}
+        <path d="M30 168c10 12 22 22 36 28" stroke="#286B58" strokeWidth="18" strokeLinecap="round" fill="none" />
+        <circle cx="70" cy="198" r="9" fill="#E8B48C" />
+        {/* legs */}
+        <path d="M40 250c2 18 0 36-6 52h16c8-18 12-38 10-56Z" fill="#173C35" />
+        <path d="M66 250c6 16 6 36 2 52h16c4-18 4-38-2-54Z" fill="#173C35" />
+      </g>
+
+      {/* laptop on desk */}
+      <g transform="translate(180 268) rotate(-4)">
+        <rect x="0" y="0" width="76" height="48" rx="6" fill="#173C35" />
+        <rect x="5" y="5" width="66" height="38" rx="4" fill="#E8EEE5" />
+        <path d="M14 34c10-14 22-20 34-18" stroke="#286B58" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M14 24h24" stroke="#D96D51" strokeWidth="3" strokeLinecap="round" />
+        <rect x="-8" y="46" width="92" height="8" rx="4" fill="#286B58" />
+      </g>
+
+      {/* milestone dots along the bottom */}
+      <g>
+        <circle cx="40" cy="392" r="6" fill="#286B58" />
+        <circle cx="120" cy="392" r="6" fill="#286B58" opacity="0.7" />
+        <circle cx="200" cy="392" r="6" fill="#E7BF63" />
+        <circle cx="280" cy="392" r="6" fill="#286B58" opacity="0.7" />
+        <circle cx="360" cy="392" r="6" fill="#286B58" />
+        <path d="M46 392h68M126 392h68M206 392h68M286 392h68" stroke="#E2E6DC" strokeWidth="3" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}

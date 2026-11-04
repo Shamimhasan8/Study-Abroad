@@ -176,7 +176,7 @@ export function OpportunityDetailView() {
             {t(opportunity.kind === "funding_scheme" ? "explore.kind.scheme" : "explore.kind.programme")}
           </Badge>
         </div>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+        <h1 className="font-display text-[26px] font-bold leading-tight tracking-tight sm:text-3xl">
           {lang === "bn" && opportunity.titleBn ? opportunity.titleBn : opportunity.title}
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">

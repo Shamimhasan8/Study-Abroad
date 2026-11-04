@@ -111,7 +111,7 @@ export function OnboardingView() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">{t("onboarding.title")}</h1>
+        <h1 className="font-display text-[26px] font-bold tracking-tight sm:text-3xl">{t("onboarding.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
         <div className="mt-4 flex items-center gap-3">
           <Progress value={((step + 1) / totalSteps) * 100} className="flex-1" aria-label={t("onboarding.progress", { current: String(step + 1), total: String(totalSteps) })} />

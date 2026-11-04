@@ -67,7 +67,7 @@ export function SettingsView({ onSignIn }: { onSignIn: () => void }) {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+        <h1 className="font-display text-[26px] font-bold tracking-tight sm:text-3xl">{t("settings.title")}</h1>
       </header>
 
       <div className="flex flex-col gap-5">
