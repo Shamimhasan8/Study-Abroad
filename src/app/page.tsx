@@ -129,7 +129,7 @@ function useUrlRouting() {
     applying.current = true;
     useAppStore.getState().applyFromUrl(stateOfUrl());
     applying.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // Store → URL: every navigation pushes a history entry (back/forward work).
@@ -145,7 +145,7 @@ function useUrlRouting() {
       }
     }
     firstSync.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [view, detailSlug, prepareTab, compareSlugs, exploreFilters]);
 
   // URL ← browser: back/forward buttons re-apply the URL state to the store.
@@ -246,7 +246,7 @@ function Shell() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   return (

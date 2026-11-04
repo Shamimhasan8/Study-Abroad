@@ -45,7 +45,7 @@ export function ExploreView() {
         setExploreFilters({ country: profile.countryPrefs[0] });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [profile?.countryPrefs]);
 
   const load = async () => {
