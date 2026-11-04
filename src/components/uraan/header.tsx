@@ -74,7 +74,7 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
     </button>
   );
 
-  const SecondaryItems = () => (
+  const renderSecondaryItems = () => (
     <>
       <DropdownMenuItem onClick={() => go("calendar")}>
         <CalendarDays className="h-4 w-4" aria-hidden="true" />
@@ -177,7 +177,7 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel className="truncate">{user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <SecondaryItems />
+                {renderSecondaryItems()}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4" aria-hidden="true" />
