@@ -110,6 +110,7 @@ model Opportunity {
   costsJson        String // CostItem[]
   fundingJson      String // FundingItem[]
   exclusionsJson   String // string[]
+  exclusionsBn     String? // string[] (Bangla)
   sourcesJson      String // SourceRef[]
   reviewState    String // baseline_review | verified_current | stale
   retrievedAt    DateTime
