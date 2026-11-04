@@ -172,7 +172,9 @@ export function CompareView() {
                   </ul>
                 ))}
                 {row(t("detail.reviewState"), (o) => (
-                  <Badge variant="outline" className="text-muted-foreground">{o.reviewState}</Badge>
+                  <Badge variant="outline" className="text-muted-foreground">
+                    {t(o.reviewState === "baseline_review" ? "review.baseline" : o.reviewState === "verified_current" ? "review.verified" : "review.stale")}
+                  </Badge>
                 ))}
                 {row("", (o) => (
                   <Button size="sm" variant="outline" onClick={() => navigate("detail", o.slug)}>

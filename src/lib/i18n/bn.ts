@@ -218,6 +218,9 @@ export const bn: Record<TranslationKey, string> = {
   "detail.isGoal": "আপনার বর্তমান টার্গেট",
   "detail.unknownField": "প্রকাশিত নেই / অজানা",
   "detail.officialNote": "নির্ভর করার আগে অবশ্যই অফিসিয়াল পাতায় নিশ্চিত করুন।",
+  "review.baseline": "রিসার্চ বেসলাইনে যাচাইকৃত — এই সাইকেল আবার যাচাই করুন",
+  "review.verified": "বর্তমান সাইকেলে যাচাইকৃত",
+  "review.stale": "সম্ভবত পুরোনো — পুনঃযাচাই বাকি",
   "detail.gapTitle": "আপনার জন্য কী কম",
   "detail.gapEmpty": "রিভিউ করা শর্তে কোনো ঘাটতি পাওয়া যায়নি।",
 
