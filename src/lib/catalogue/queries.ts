@@ -58,6 +58,14 @@ export function rowToOpportunity(row: NonNullable<OpportunityRow>): Opportunity 
   };
 }
 
+/** Level inclusion: master's and PhD filters both include combined master_phd records. */
+const LEVEL_INCLUSION: Record<string, string[]> = {
+  bachelor: ["bachelor"],
+  master: ["master", "master_phd"],
+  phd: ["phd", "master_phd"],
+  master_phd: ["master_phd"],
+};
+
 export async function listOpportunities(filters?: {
   country?: string;
   level?: string;
@@ -67,7 +75,10 @@ export async function listOpportunities(filters?: {
 }): Promise<Opportunity[]> {
   const where: Record<string, unknown> = {};
   if (filters?.country && filters.country !== "all") where.country = filters.country;
-  if (filters?.level && filters.level !== "all") where.level = filters.level;
+  if (filters?.level && filters.level !== "all") {
+    const levels = LEVEL_INCLUSION[filters.level];
+    where.level = levels && levels.length === 1 ? levels[0] : { in: levels ?? [filters.level] };
+  }
   if (filters?.cycleStatus && filters.cycleStatus !== "all") where.cycleStatus = filters.cycleStatus;
   const rows = await db.opportunity.findMany({
     where,
