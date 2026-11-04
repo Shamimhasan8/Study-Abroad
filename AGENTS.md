@@ -37,11 +37,21 @@ Bangladeshi students (first release). Read this file before editing anything.
 - `src/app/` — the single-page student interface (all views nested) + API routes
 - `src/lib/` — domain modules: identity, catalogue, matching, planning,
   funding, ai adapter, documents, ingestion
-- `prisma/` — schema + migrations (SQLite)
+- `prisma/` — schema + seeds (SQLite)
 - `src/components/uraan/` — product-specific UI (illustrations, header, views)
 - `src/components/ui/` — shadcn/ui primitives (do not hand-rewrite)
-- `docs/` — source registry, methodology notes
+- `docs/` — source registry, methodology notes, presentation outline
 - `db/` — SQLite database file and private document storage (gitignored)
+
+### Deterministic engines (never AI-overridden)
+
+| Module | Role |
+| --- | --- |
+| `src/lib/matching/engine.ts` | Requirement evaluator — operators over profile facts; 5-valued results; unknown operators resolve to `needs_institution_confirmation`, never a pass |
+| `src/lib/planning/engine.ts` + `templates.ts` | Back-planned task scheduler with capacity check and stable task keys |
+| `src/lib/funding/engine.ts` | Worksheet math — competitive awards never counted as guaranteed; unknown amounts block exact totals |
+| `src/lib/dates.ts` | Date-only precision, all-day ICS generation (no invented times/zones) |
+| `src/lib/ai/provider.ts` | The ONLY z-ai-web-dev-sdk touchpoint — timeouts, retries, quotas, sanitized logs |
 
 ## Environment notes
 
