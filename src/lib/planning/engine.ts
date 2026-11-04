@@ -94,7 +94,7 @@ export function generatePlan(
     const finalDue = due < minStart ? minStart : due;
 
     tasks.push({
-      id: "",
+      id: template.stableKey,
       stableKey: template.stableKey,
       title: template.title,
       titleBn: template.titleBn,
@@ -116,7 +116,7 @@ export function generatePlan(
       if (result.result !== "not_met" && result.result !== "needs_information") continue;
       const due = addDays(today, 30);
       tasks.push({
-        id: "",
+        id: `gap-${result.ruleId}`,
         stableKey: `gap-${result.ruleId}`,
         title: `Resolve: ${result.title}`,
         titleBn: result.titleBn ? `মেটান: ${result.titleBn}` : undefined,
@@ -136,7 +136,7 @@ export function generatePlan(
   // ---------- Institution-confirmation task (honest unknowns) ----------
   if (evaluation && evaluation.counts.needsConfirm > 0) {
     tasks.push({
-      id: "",
+      id: `confirm-${opportunity.slug}`,
       stableKey: `confirm-${opportunity.slug}`,
       title: `Confirm ${evaluation.counts.needsConfirm} requirement(s) with the institution`,
       titleBn: `${evaluation.counts.needsConfirm}টি শর্ত প্রতিষ্ঠানের সাথে নিশ্চিত করুন`,
@@ -156,7 +156,7 @@ export function generatePlan(
   const officialDeadline = opportunity.deadlines.find((d) => d.official && d.closeDate);
   if (officialDeadline?.closeDate) {
     tasks.push({
-      id: "",
+      id: `official-deadline-${opportunity.slug}`,
       stableKey: `official-deadline-${opportunity.slug}`,
       title: `Official deadline: ${officialDeadline.closeDate}`,
       titleBn: `অফিসিয়াল ডেডলাইন: ${officialDeadline.closeDate}`,

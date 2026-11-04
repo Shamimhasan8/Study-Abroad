@@ -106,9 +106,10 @@ export async function POST(request: Request) {
         },
       });
       await tx.goal.update({ where: { id: goal.id }, data: { activePlanId: created.id } });
+      const savedTaskIds: string[] = [];
       for (const task of plan.tasks) {
         const prev = preserved.get(task.stableKey);
-        await tx.task.create({
+        const createdTask = await tx.task.create({
           data: {
             planId: created.id,
             stableKey: task.stableKey,
@@ -127,18 +128,19 @@ export async function POST(request: Request) {
             order: task.order,
           },
         });
+        savedTaskIds.push(createdTask.id);
       }
-      return created;
+      return { planId: created.id, taskIds: savedTaskIds };
     });
 
     const savedPlan: PlanData = {
       ...plan,
-      id: result.id,
+      id: result.planId,
       tasks: plan.tasks.map((t, idx) => {
         const prev = preserved.get(t.stableKey);
         return {
           ...t,
-          id: `${result.id}-${idx}`,
+          id: result.taskIds[idx] ?? t.id,
           status: (prev?.status as PlanTask["status"]) ?? t.status,
           notes: prev?.notes ?? undefined,
           userEdited: prev?.userEdited ?? false,
