@@ -34,6 +34,7 @@ export function OpportunityDetailView() {
   const [matchError, setMatchError] = useState(false);
   const [explainBusy, setExplainBusy] = useState(false);
   const [explanation, setExplanation] = useState<{ text: string; aiGenerated: boolean } | null>(null);
+  const [customRate, setCustomRate] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!detailSlug) {
@@ -121,7 +122,7 @@ export function OpportunityDetailView() {
     );
   }
 
-  const worksheet = buildFundingWorksheet(opportunity, profile ?? { degreeLevel: "undecided", fieldInterests: [], intakeFlexible: true, citizenships: [], uiLanguage: "en", qualifications: [], languages: [], tests: [], financeUncertain: false, countryPrefs: [], instructionLang: "any", willingToLearnLang: false, onboardingCompleted: false });
+  const worksheet = buildFundingWorksheet(opportunity, profile ?? { degreeLevel: "undecided", fieldInterests: [], intakeFlexible: true, citizenships: [], uiLanguage: "en", qualifications: [], languages: [], tests: [], financeUncertain: false, countryPrefs: [], instructionLang: "any", willingToLearnLang: false, onboardingCompleted: false }, customRate);
   const contribution = contributionContext(profile ?? ({} as never), worksheet.uncoveredAnnualBdt);
 
   const resultIcon = (result: string) => {
@@ -349,6 +350,24 @@ export function OpportunityDetailView() {
         <AccordionItem value="worksheet">
           <AccordionTrigger className="text-base font-semibold">{t("detail.worksheet")}</AccordionTrigger>
           <AccordionContent>
+            <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-secondary/60 p-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="planning-rate" className="text-xs font-semibold text-foreground/80">
+                  {t("funding.rate")}
+                </label>
+                <input
+                  id="planning-rate"
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  defaultValue={worksheet.planningRate ?? ""}
+                  onBlur={(e) => setCustomRate(e.target.value ? Number(e.target.value) : undefined)}
+                  className="h-9 w-36 rounded-md border border-border bg-card px-3 text-sm tabular-nums"
+                  placeholder={String(worksheet.planningRate ?? "rate")}
+                />
+              </div>
+              <p className="flex-1 text-xs leading-relaxed text-muted-foreground">{t("funding.rateNote")}</p>
+            </div>
             {worksheet.costLines.length === 0 && worksheet.fundingLines.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("funding.unknownNote")}</p>
             ) : (
