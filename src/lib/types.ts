@@ -43,6 +43,7 @@ export interface ProfileData {
   residence?: string;
   qualificationCountry?: string;
   uiLanguage: "en" | "bn";
+  birthYear?: number; // optional; used only for age-window rules
   qualifications: Qualification[];
   languages: LanguageAbility[];
   tests: OfficialTestResult[];
@@ -53,6 +54,7 @@ export interface ProfileData {
   instructionLang: InstructionLang;
   willingToLearnLang: boolean;
   weeklyHours?: number;
+  workExperienceYears?: number; // optional; used for experience-based rules
   responsibilities?: string;
   onboardingCompleted: boolean;
 }
