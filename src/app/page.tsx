@@ -3,7 +3,7 @@
 /**
  * Uraan single-page application shell.
  * All screens are coherent nested views switched client-side; the server
- * exposes only / plus JSON API routes. View wiring grows as modules land.
+ * exposes only / plus JSON API routes.
  */
 import { useEffect, useState } from "react";
 import { I18nProvider } from "@/lib/i18n";
@@ -11,6 +11,17 @@ import { useAppStore } from "@/lib/store";
 import { UraanHeader } from "@/components/uraan/header";
 import { UraanFooter } from "@/components/uraan/footer";
 import { HomeView } from "@/components/uraan/home-view";
+import { OnboardingView } from "@/components/uraan/onboarding-view";
+import { JourneyView } from "@/components/uraan/journey-view";
+import { ExploreView } from "@/components/uraan/explore-view";
+import { OpportunityDetailView } from "@/components/uraan/opportunity-detail";
+import { CompareView } from "@/components/uraan/compare-view";
+import { PrepareView } from "@/components/uraan/prepare/prepare-view";
+import { ApplicationsView } from "@/components/uraan/applications-view";
+import { CalendarView } from "@/components/uraan/calendar-view";
+import { SourcesView } from "@/components/uraan/sources-view";
+import { SettingsView } from "@/components/uraan/settings-view";
+import { AdminView } from "@/components/uraan/admin-view";
 import { AuthDialog } from "@/components/uraan/auth-dialog";
 import type { SessionUser } from "@/lib/types";
 
@@ -44,9 +55,17 @@ function Shell() {
       <UraanHeader onSignIn={() => setAuthOpen(true)} />
       <div className="flex flex-1 flex-col">
         {view === "home" && <HomeView />}
-        {/* Further views are wired in as their modules land: onboarding,
-            journey, explore, detail, compare, prepare, applications,
-            calendar, sources, settings, admin. */}
+        {view === "onboarding" && <OnboardingView />}
+        {view === "journey" && <JourneyView />}
+        {view === "explore" && <ExploreView />}
+        {view === "detail" && <OpportunityDetailView />}
+        {view === "compare" && <CompareView />}
+        {view === "prepare" && <PrepareView />}
+        {view === "applications" && <ApplicationsView />}
+        {view === "calendar" && <CalendarView />}
+        {view === "sources" && <SourcesView />}
+        {view === "settings" && <SettingsView onSignIn={() => setAuthOpen(true)} />}
+        {view === "admin" && <AdminView />}
       </div>
       <UraanFooter />
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
