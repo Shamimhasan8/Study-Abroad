@@ -5,6 +5,12 @@ admissions page and official scholarship call, (2) university
 admissions/financial-aid office, (3) government / embassy / administrator /
 official national portal, (4) general orientation material labelled general.
 
+> **Post-build status (5 Nov 2026):** all 11 records shipped with
+> `baseline_review` state and were exercised end-to-end in the browser
+> walkthrough (see RELEASE_REPORT.md). Cycle dates remain to be
+> re-verified per record from an unrestricted network before reliance —
+> the ingestion runner and editorial queue are live for that pass.
+
 ## Verification honesty
 
 Each catalogue record stores its own `reviewState` and `retrievedAt`. Records
