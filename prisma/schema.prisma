@@ -461,3 +461,25 @@ model AuditEvent {
   @@index([createdAt])
 }
 
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  ok        Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+model GuestImport {
+  id         String   @id @default(cuid())
+  userId     String
+  importKey  String
+  status     String // completed | conflict | superseded
+  receiptJson String?
+  createdAt  DateTime @default(now())
+  completedAt DateTime?
+
+  @@unique([userId, importKey])
+}

@@ -1,8 +1,17 @@
 import { db } from "@/lib/db";
 import { hashPassword, createSession, setSessionCookie } from "@/lib/identity/auth";
 import { registerSchema, badRequest, serverError } from "@/lib/validation";
-import { db as prisma } from "@/lib/db";
 
+/**
+ * Public registration ALWAYS creates a student account.
+ *
+ * Privilege model (audited fix P0-4): no first-user, allowlist, or
+ * client-supplied flag can ever mint an admin here. Administrators are
+ * provisioned only by the owner through `bun run admin:grant -- <email>`
+ * (scripts/admin-grant.ts) on a trusted machine with database access.
+ * ADMIN_EMAILS is advisory metadata for that tool — it is deliberately
+ * ignored by every public request path.
+ */
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
@@ -21,29 +30,29 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
 
-    // First user becomes admin when no admin exists and no allowlist is set.
-    const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean);
-    const anyAdmin = adminEmails.length
-      ? await prisma.user.count({ where: { role: "admin", email: { in: adminEmails } } })
-      : await prisma.user.count({ where: { role: "admin" } });
-    const role = adminEmails.includes(email) || anyAdmin === 0 ? "admin" : "student";
+    try {
+      const user = await db.user.create({
+        data: { email, passwordHash, displayName: name ?? null, role: "student" },
+      });
 
-    const user = await db.user.create({
-      data: { email, passwordHash, displayName: name ?? null, role },
-    });
+      const token = await createSession(user.id);
+      await setSessionCookie(token);
 
-    const token = await createSession(user.id);
-    await setSessionCookie(token);
-
-    return Response.json({
-      ok: true,
-      data: {
-        user: { id: user.id, email: user.email, name: user.displayName ?? undefined, role: user.role },
-      },
-    });
+      return Response.json(
+        {
+          ok: true,
+          data: {
+            user: { id: user.id, email: user.email, name: user.displayName ?? undefined, role: user.role },
+          },
+        },
+        { headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (err) {
+      // Unique-constraint race between two concurrent registrations.
+      const code = (err as { code?: string })?.code;
+      if (code === "P2002") return badRequest("email_taken");
+      throw err;
+    }
   } catch {
     return serverError();
   }

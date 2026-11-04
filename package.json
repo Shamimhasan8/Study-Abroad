@@ -10,7 +10,11 @@
     "db:push": "prisma db push --accept-data-loss",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "admin:audit": "bun scripts/admin-grant.ts audit",
+    "admin:grant": "bun scripts/admin-grant.ts grant",
+    "admin:revoke": "bun scripts/admin-grant.ts revoke",
+    "admin:sync-allowlist": "bun scripts/admin-grant.ts sync-allowlist"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
