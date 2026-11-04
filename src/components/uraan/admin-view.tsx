@@ -101,10 +101,11 @@ export function AdminView() {
     void load();
   }, [load]);
 
-  const runIngestion = async () => {
+  const runIngestion = async (volatility?: string) => {
     setRunningIngestion(true);
     try {
-      const res = await fetch("/api/admin/ingestion", { method: "POST" });
+      const url = volatility ? `/api/admin/ingestion?volatility=${volatility}` : "/api/admin/ingestion";
+      const res = await fetch(url, { method: "POST" });
       const json = await res.json();
       if (json.ok) {
         const failed = json.data.outcomes.filter((o: { status: string }) => o.status === "failed").length;
@@ -182,10 +183,21 @@ export function AdminView() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("admin.notifyNote")}</p>
         </div>
-        <Button onClick={runIngestion} disabled={runningIngestion} className="gap-1.5">
-          {runningIngestion ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
-          {t("admin.runIngestion")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => runIngestion()} disabled={runningIngestion} className="gap-1.5">
+            {runningIngestion ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            {t("admin.runIngestion")}
+          </Button>
+          <Button variant="outline" onClick={() => runIngestion("cycle-critical")} disabled={runningIngestion} size="sm">
+            cycle-critical
+          </Button>
+          <Button variant="outline" onClick={() => runIngestion("medium")} disabled={runningIngestion} size="sm">
+            medium
+          </Button>
+          <Button variant="outline" onClick={() => runIngestion("low")} disabled={runningIngestion} size="sm">
+            low
+          </Button>
+        </div>
       </header>
 
       {loading ? (
