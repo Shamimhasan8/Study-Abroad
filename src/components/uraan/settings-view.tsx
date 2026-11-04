@@ -18,6 +18,26 @@ export function SettingsView({ onSignIn }: { onSignIn: () => void }) {
   const { profile, user, resetDomain, navigate, setUser } = useAppStore();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const exportGuestData = () => {
+    const state = useAppStore.getState();
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      kind: "uraan-guest-export",
+      profile: state.profile,
+      plan: state.plan,
+      goalSlug: state.goalSlug,
+      shortlist: state.shortlist,
+      applications: state.applications,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "uraan-guest-data.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   const signOut = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -172,13 +192,20 @@ export function SettingsView({ onSignIn }: { onSignIn: () => void }) {
             ) : (
               <div className="flex flex-col items-start gap-3">
                 <p className="text-sm text-muted-foreground">{t("auth.guestNotice")}</p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={onSignIn} className="gap-1.5">
                     <LogIn className="h-3.5 w-3.5" aria-hidden="true" />
                     {t("auth.signUp")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={onSignIn}>{t("auth.signIn")}</Button>
+                  <Button variant="outline" size="sm" onClick={exportGuestData} className="gap-1.5">
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("settings.export")}
+                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {lang === "bn" ? "অতিথি ডেটা JSON ফাইলে এক্সপোর্ট হয় — নিজ দায়িত্বে সংরক্ষণ করুন।" : "Guest data exports as a JSON file — store it yourself."}
+                </p>
               </div>
             )}
           </CardContent>
