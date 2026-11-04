@@ -25,7 +25,7 @@ type CatalogueResponse = {
 
 export function ExploreView() {
   const { t, lang } = useI18n();
-  const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare, profile } = useAppStore();
+  const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare, profile, user } = useAppStore();
 
   const [data, setData] = useState<CatalogueResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +103,18 @@ export function ExploreView() {
 
   const openDetail = (slug: string) => {
     navigate("detail", slug);
+  };
+
+  // Shortlist sync: guests keep it locally; signed-in users persist via API.
+  const onToggleShortlist = (slug: string) => {
+    toggleShortlist(slug);
+    if (user) {
+      void fetch("/api/shortlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      }).catch(() => undefined);
+    }
   };
 
   return (
@@ -243,7 +255,7 @@ export function ExploreView() {
                     <Button
                       size="sm"
                       variant={shortlisted ? "secondary" : "outline"}
-                      onClick={() => toggleShortlist(o.slug)}
+                      onClick={() => onToggleShortlist(o.slug)}
                       aria-pressed={shortlisted}
                       className="gap-1.5"
                     >

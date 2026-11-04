@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 export function OpportunityDetailView() {
   const { t, lang } = useI18n();
   const { detailSlug, navigate, profile, evaluations, setEvaluation, shortlist, toggleShortlist, setGoal, goalSlug, user } = useAppStore();
-
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [loading, setLoading] = useState(true);
   const [matching, setMatching] = useState(false);
@@ -57,6 +56,17 @@ export function OpportunityDetailView() {
 
   const evaluation = detailSlug ? evaluations[detailSlug] : undefined;
 
+  // Shortlist sync for signed-in users (guests stay local).
+  const onToggleShortlist = (slug: string) => {
+    toggleShortlist(slug);
+    if (user) {
+      void fetch("/api/shortlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      }).catch(() => undefined);
+    }
+  };
   const runMatch = async () => {
     if (!detailSlug) return;
     setMatching(true);
@@ -180,7 +190,7 @@ export function OpportunityDetailView() {
           </Button>
           <Button
             variant={shortlist.includes(opportunity.slug) ? "secondary" : "outline"}
-            onClick={() => toggleShortlist(opportunity.slug)}
+            onClick={() => onToggleShortlist(opportunity.slug)}
             className="gap-1.5"
           >
             <Bookmark className={cn("h-4 w-4", shortlist.includes(opportunity.slug) && "fill-current")} aria-hidden="true" />
