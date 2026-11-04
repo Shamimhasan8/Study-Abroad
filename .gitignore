@@ -71,3 +71,4 @@ Caddyfile
 
 # prompt workspace
 prompt
+/agent-ctx/
