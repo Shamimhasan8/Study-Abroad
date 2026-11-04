@@ -5,7 +5,7 @@
  * One small group of questions per step; everything saves automatically
  * (localStorage for guests, profile API for signed-in users).
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -72,6 +72,11 @@ export function OnboardingView() {
 
   const data = profile ?? emptyProfile();
   const totalSteps = 9;
+
+  // Keep the active step visible when moving between steps (especially on mobile).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
 
   const save = (partial: Partial<ProfileData>) => {
     const next = { ...data, ...partial };
