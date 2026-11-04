@@ -23,15 +23,15 @@ export function CompareView() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (compareSlugs.length === 0) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    void (async () => {
+    const slugs = compareSlugs;
+    const load = async () => {
+      if (slugs.length === 0) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
       const results = await Promise.all(
-        compareSlugs.map(async (slug) => {
+        slugs.map(async (slug) => {
           try {
             const res = await fetch(`/api/catalogue/${slug}`);
             const json = await res.json();
@@ -43,7 +43,8 @@ export function CompareView() {
       );
       setItems(results.filter((o): o is Opportunity => o !== null));
       setLoading(false);
-    })();
+    };
+    void load();
   }, [compareSlugs]);
 
   const dash = t("compare.unknown");
