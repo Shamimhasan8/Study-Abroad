@@ -1,0 +1,152 @@
+# DEPLOYMENT.md — taking Uraan from this environment to production
+
+Status: **implementation complete; production verification pending owner
+credentials.** The build sandbox here has no Supabase/Neon/Vercel account
+access, so every production step below is written to be executed by the
+owner. Nothing in this document claims to have been deployed.
+
+## What broke on the last deployment (root cause)
+
+The audited Vercel deployment served `503 database: unreachable` and blank
+`500`s because:
+
+1. The app shipped with `provider = "sqlite"` + a file `DATABASE_URL`. Vercel
+   function instances have ephemeral, per-instance filesystems — a bundled
+   SQLite file is not a shared durable database. Every cold start saw either
+   an empty or a missing file.
+2. Document uploads wrote to `./db/private-docs` — same ephemerality problem.
+3. `/api/catalogue` had no failure envelope, so the DB error surfaced as a
+   blank 500 instead of a typed 503.
+
+Fixes already in this repo (this commit range): typed 503 envelopes with
+request IDs on every data route, a document storage adapter with a
+production object-storage backend, and this documented migration path.
+
+## Step 1 — Managed Postgres (Supabase recommended)
+
+1. Create a Supabase project (region close to your users, e.g. Singapore for
+   Bangladesh). From **Project settings → Database** copy:
+   - Connection string (**Session pooler / port 5432**) → `DATABASE_URL`
+     for migrations/seeds/CLI scripts.
+   - Connection string (**Transaction pooler / port 6543**) →
+     `DATABASE_URL_POOLED` for the deployed app (serverless-friendly).
+2. Convert the Prisma schema provider (SQLite dev → Postgres prod):
+
+   ```bash
+   # in the repo, on your machine
+   cp prisma/schema.prisma prisma/schema.sqlite.prisma   # keep dev copy
+   sed -i 's/provider = "sqlite"/provider = "postgresql"/' prisma/schema.prisma
+   # delete any sqlite-specific `url = "file:..."` rows; env DATABASE_URL is used
+   DATABASE_URL="postgresql://..." bunx prisma migrate dev --name pg-baseline
+   ```
+
+   The schema contains no SQLite-only column types, so the swap is a
+   provider change plus a fresh migration. `prisma migrate dev` locally
+   generates `prisma/migrations/…_pg_baseline`; commit it.
+3. Apply to production (do **not** use `db push --accept-data-loss` on prod):
+
+   ```bash
+   DATABASE_URL="<session-pooler url>" bunx prisma migrate deploy
+   ```
+4. Seed the baseline catalogue — idempotent, never overwriting editorially
+   reviewed rows (see `prisma/seed.ts` guard):
+
+   ```bash
+   DATABASE_URL="<session-pooler url>" bun prisma/seed.ts
+   ```
+5. On Vercel set `DATABASE_URL` to the **transaction pooler** URL.
+   Migrations run via the CLI above, never per-request.
+
+> Data transfer note: the dev SQLite file here contains only test accounts
+> and baseline seeds — no real user data exists to migrate. If you later
+> have real SQLite data, export per-table and import with `COPY`/inserts;
+> never sync by pointing both providers at one file.
+
+## Step 2 — Private document storage
+
+1. In Supabase → Storage, create a **private** bucket
+   `uraan-documents` (default name).
+2. On Vercel set:
+
+   ```
+   DOCUMENTS_STORAGE="supabase"
+   SUPABASE_URL="https://<project>.supabase.co"
+   SUPABASE_SERVICE_ROLE_KEY="<service_role key>"
+   DOCUMENTS_BUCKET="uraan-documents"
+   ```
+
+   The adapter (`src/lib/documents/adapters/supabase.ts`) stores each
+   object under `{userId}/{48-hex-random}`; downloads flow only through
+   the authenticated, owner-checked API route. The service key never
+   reaches the browser.
+3. Existing local dev uploads under `./db/private-docs` (none in this
+   environment) would be re-uploaded per user with `documents/route.ts`'s
+   upload flow; there is no silent auto-migration — deliberate, so nothing
+   is copied without the owner choosing to.
+
+## Step 3 — Admin provisioning (before opening registration)
+
+```bash
+# after YOU register your own account on the deployed app:
+DATABASE_URL="<session url>" bun run admin:grant -- your@email.example
+# audit roles any time:
+bun run admin:audit
+```
+
+Public registration can now NEVER mint an admin (audited fix).
+
+## Step 4 — Scheduled ingestion (Vercel Cron)
+
+`vercel.json` (repo root, optional):
+
+```json
+{
+  "crons": [{ "path": "/api/admin/ingestion?volatility=high", "schedule": "0 2 * * *" }]
+}
+```
+
+Set `INGESTION_CRON_SECRET` on Vercel; Vercel Cron calls receive an
+`Authorization: Bearer` header with that secret. The route accepts either
+the cron secret or an admin session — a machine never borrows a human
+cookie. Runs persist in `IngestionJob` + `AuditEvent`.
+
+## Step 5 — AI provider
+
+The AI adapter is server-side only (`src/lib/ai/provider.ts`). Verify the
+z-ai-web-dev-sdk credential path on Vercel per its documentation; the
+provider, quotas, timeouts, and labelled fallbacks are already wired. If
+the sdk cannot run on your platform, replace the adapter module — feature
+routes stay unchanged.
+
+## Step 6 — Environment variables (Vercel → Settings → Environment Variables)
+
+| Variable | Value | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | transaction pooler URL | Postgres; see step 1 |
+| `DOCUMENTS_STORAGE` | `supabase` | production persistence |
+| `SUPABASE_URL` | project URL | documents |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key | documents; server only |
+| `DOCUMENTS_BUCKET` | `uraan-documents` | private bucket |
+| `ADMIN_EMAILS` | your emails | advisory for CLI only |
+| `INGESTION_CRON_SECRET` | long random string | cron auth |
+| `AI_*` | optional tuning | timeouts/quotas/limits |
+
+Never set `DOCUMENTS_STORAGE=local` on serverless — the adapter refuses
+implicit local mode in production and answers a clear operational error.
+
+## Step 7 — Post-deploy smoke checks
+
+```bash
+curl -s https://<your-domain>/api/health          # expect 200 + counts
+curl -s https://<your-domain>/api/catalogue | head -c 200   # typed JSON
+```
+
+Then run the browser walkthrough in `docs/PRESENTATION.md` on the public
+URL (register → merge → plan → task completion → reload → Bangla → 360px).
+Record results in `docs/RELEASE_CHECKLIST.md`.
+
+## Local development (unchanged)
+
+`bun run dev` keeps SQLite + local document adapter; no production
+prerequisites are hidden — misconfigurations answer with actionable
+errors instead of silently degrading.
