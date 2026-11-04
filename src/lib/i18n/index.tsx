@@ -40,10 +40,13 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Language>("en");
 
-  // Hydrate from storage once on mount (client only).
+  // Hydrate from storage once on mount (client only). Reading storage in an
+  // effect (not a lazy initializer) keeps SSR markup deterministic — the
+  // stored language applies after hydration without a markup mismatch.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- deliberate post-hydration storage read
       if (stored === "en" || stored === "bn") setLangState(stored);
     } catch {
       /* storage unavailable — stay with default */
