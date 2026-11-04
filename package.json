@@ -14,7 +14,10 @@
     "admin:audit": "bun scripts/admin-grant.ts audit",
     "admin:grant": "bun scripts/admin-grant.ts grant",
     "admin:revoke": "bun scripts/admin-grant.ts revoke",
-    "admin:sync-allowlist": "bun scripts/admin-grant.ts sync-allowlist"
+    "admin:sync-allowlist": "bun scripts/admin-grant.ts sync-allowlist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -93,6 +96,7 @@
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.1.0"
   }
 }

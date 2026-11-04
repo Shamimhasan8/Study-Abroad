@@ -157,12 +157,17 @@ const VALIDITY_MONTHS: Record<string, number> = {
   gmat: 60,
 };
 
+/**
+ * Parse an official score into a number. Strict: "N2" (a JLPT level) or any
+ * text where digits are glued to letters stays null — unknown, never a
+ * number that could silently satisfy a threshold.
+ */
 export function parseScore(score: string): number | null {
-  const trimmed = score.trim();
-  const match = /(\d+(?:\.\d+)?)/.exec(trimmed);
-  if (!match) return null;
-  const value = Number(match[1]);
-  return Number.isFinite(value) ? value : null;
+  const trimmed = score.trim().replace(/,/g, ".");
+  if (/^\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  const withPrefix = /^(?:band|score|overall)\s+(\d+(?:\.\d+)?)$/i.exec(trimmed);
+  if (withPrefix) return Number(withPrefix[1]);
+  return null;
 }
 
 export function scoreInFamilyRange(family: string, value: number): boolean {

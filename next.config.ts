@@ -2,9 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Real type gate: the build must fail on type errors (audited fix P1-4).
+  // `tsc --noEmit` is also run in CI/verification; see docs/RELEASE_CHECKLIST.md.
   reactStrictMode: false,
   async headers() {
     return [
