@@ -25,7 +25,7 @@ type CatalogueResponse = {
 
 export function ExploreView() {
   const { t, lang } = useI18n();
-  const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare } = useAppStore();
+  const { navigate, shortlist, toggleShortlist, compareSlugs, toggleCompare, profile } = useAppStore();
 
   const [data, setData] = useState<CatalogueResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,15 @@ export function ExploreView() {
   const [country, setCountry] = useState("all");
   const [level, setLevel] = useState("all");
   const [cycle, setCycle] = useState("all");
+
+  // Pre-fill the destination filter once from onboarding preferences.
+  // Degree level is NOT pre-filled: exact-level filtering would hide
+  // combined master/PhD records from master's-seekers.
+  useEffect(() => {
+    if (profile?.countryPrefs?.length) {
+      setCountry((current) => (current === "all" ? profile.countryPrefs[0] : current));
+    }
+  }, [profile?.countryPrefs]);
 
   const load = async () => {
     setLoading(true);
