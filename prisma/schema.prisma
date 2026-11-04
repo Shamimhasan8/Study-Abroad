@@ -43,6 +43,7 @@ model User {
   aiRuns       AiRun[]
   notifications NotificationEvent[]
   reviewEvents ReviewEvent[]
+  reminders    Reminder[]
 }
 
 model Session {
@@ -119,3 +120,342 @@ model Opportunity {
   @@index([country])
   @@index([level])
 }
+
+// ===== Source provenance & editorial =====
+
+/// Allowlisted official sources only — the ingestion worker never fetches
+/// user-supplied URLs (SSRF-safe by construction).
+model Source {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  url        String
+  title      String
+  publisher  String
+  tier        Int // 1 programme page … 4 general orientation
+  volatility String // cycle-critical | medium | low
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  versions SourceVersion[]
+}
+
+/// One row per fetch attempt: durable run history, health, and hashes.
+/// A fetch success is never treated as factual verification.
+model SourceVersion {
+  id          String   @id @default(cuid())
+  sourceId    String
+  source      Source   @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  retrievedAt DateTime @default(now())
+  status      String // fetched | failed | unchanged
+  httpStatus  Int?
+  contentHash String?
+  sizeBytes   Int?
+  note        String?
+}
+
+/// Candidate/published facts with review state. Deadlines, eligibility,
+/// funding, tests, and visa facts require editorial approval before use.
+model FactEvidence {
+  id              String    @id @default(cuid())
+  sourceId        String
+  source          Source    @relation(fields: [sourceId], references: [id])
+  opportunitySlug String?
+  fieldPath       String
+  factValue       String
+  unit            String?
+  effectiveFrom   String?
+  extraction      String // manual | assisted
+  reviewState     String // pending | approved | rejected | superseded
+  reviewerId      String?
+  reviewedAt      DateTime?
+  confidence      String
+  conflictNote    String?
+  createdAt       DateTime  @default(now())
+
+  reviewEvents ReviewEvent[]
+}
+
+model ReviewEvent {
+  id         String        @id @default(cuid())
+  evidenceId String?
+  evidence   FactEvidence? @relation(fields: [evidenceId], references: [id])
+  actorId    String?
+  actor      User?         @relation(fields: [actorId], references: [id])
+  action     String // submitted | approved | rejected | published
+  note       String?
+  createdAt  DateTime      @default(now())
+}
+
+// ===== Shortlist, goals, plans, tasks =====
+
+model ShortlistItem {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunitySlug String
+  note            String?
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, opportunitySlug])
+}
+
+model Goal {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunitySlug String
+  degreeLevel     String
+  targetIntake    String?
+  status          String   @default("active") // active | archived
+  activePlanId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  plans Plan[]
+
+  @@index([userId, status])
+}
+
+model Plan {
+  id              String   @id @default(cuid())
+  goalId          String
+  goal            Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  horizonMonths   Int
+  engineVersion   String
+  generatedAt     DateTime @default(now())
+  infeasible      Boolean  @default(false)
+  feasibilityNote String?
+  isActive        Boolean  @default(true)
+
+  tasks Task[]
+
+  @@index([goalId])
+}
+
+model Task {
+  id          String    @id @default(cuid())
+  planId      String
+  plan        Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  stableKey   String    // stable across regenerations — no silent duplicates
+  title       String
+  titleBn     String?
+  purpose     String
+  purposeBn   String?
+  category    String // language | tests | academic | writing | recommenders | funding | documents | research | logistics
+  effortHours Float     @default(1)
+  dueDate     String? // ISO date-only; precision preserved
+  dateBasis   String    @default("estimated") // official | estimated
+  status      String    @default("todo") // todo | in_progress | done | skipped
+  completedAt DateTime?
+  notes       String?
+  userEdited  Boolean   @default(false)
+  order       Int       @default(0)
+
+  @@unique([planId, stableKey])
+}
+
+// ===== Applications & reminders =====
+
+model Application {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunitySlug String
+  opportunityTitle String
+  status          String   @default("draft") // draft | preparing | ready | submitted | awaiting | closed
+  intendedIntake  String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  events ApplicationEvent[]
+
+  @@index([userId])
+}
+
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          String // created | status_changed | note | submitted | result
+  note          String?
+  createdAt     DateTime    @default(now())
+}
+
+model Reminder {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind    String // task | application | custom
+  refId   String?
+  title   String
+  dueDate String // ISO date-only
+  read    Boolean  @default(false)
+
+  @@index([userId, dueDate])
+}
+
+// ===== Preparation tools =====
+
+model WritingDraft {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind             String // essay | sop | research
+  title            String
+  institutionPrompt String?
+  wordLimit        Int?
+  aiPolicy         String   @default("unknown") // unknown | allowed | prohibited
+  currentContent   String   @default("")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  versions DraftVersion[]
+
+  @@index([userId])
+}
+
+model DraftVersion {
+  id        String       @id @default(cuid())
+  draftId   String
+  draft     WritingDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  content   String
+  wordCount Int
+  note      String?
+  createdAt DateTime     @default(now())
+}
+
+model ExperienceEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind        String // project | work | community | family | creative
+  title       String
+  description String
+  reflection  String?
+  startDate   String?
+  endDate     String?
+  linksJson   String? // string[]
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RecommenderRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  role         String?
+  relationship String?
+  status       String   @default("planned") // planned | drafted | sent_user | confirmed | declined
+  requestDraft String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ResearchNote {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interestStatement String?
+  readingJson     String   @default("[]") // ReadingLogEntry[]
+  projectSummary  String?
+  facultyFitNotes String?
+  outreachDraft   String?
+  updatedAt       DateTime @updatedAt
+}
+
+model LanguageLogEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill     String // reading | writing | listening | speaking | grammar | vocab
+  minutes   Int
+  note      String?
+  date      String // ISO date-only
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+// ===== Private documents =====
+
+model PrivateDocument {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose      String
+  originalName String
+  storageKey   String    @unique // random, unguessable
+  mimeType     String
+  sizeBytes    Int
+  sha256       String
+  status       String    @default("stored") // stored | deleted
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  @@index([userId])
+}
+
+// ===== Ingestion, AI, notifications, audit =====
+
+model IngestionJob {
+  id            String    @id @default(cuid())
+  sourceId      String
+  scheduledFor  DateTime
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  status        String    @default("pending") // pending | leased | running | done | failed | skipped
+  attempts      Int       @default(0)
+  lastError     String?
+  leaseToken    String?
+  leaseExpiresAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([status, scheduledFor])
+}
+
+/// Sanitized AI run metadata only — no essay text or personal documents.
+model AiRun {
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  purpose      String // explain_plan | draft_feedback | practice_feedback
+  model        String
+  status       String // ok | error | timeout
+  latencyMs    Int?
+  inputTokens  Int?
+  outputTokens Int?
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model NotificationEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // source_change | reminder | system
+  title     String
+  body      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  detailJson String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
+
