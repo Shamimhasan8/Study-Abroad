@@ -154,11 +154,14 @@ export function AdminView() {
           confidence,
         }),
       });
-      const json = await res.json();
-      if (json.ok) {
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.ok) {
         toast({ title: t("common.saved") });
         setFieldPath(""); setFactValue(""); setUnit(""); setOpportunitySlug("");
         await load();
+      } else {
+        // Surface the typed rejection (invalid field path, unknown source…)
+        toast({ title: t("common.error"), description: json?.error ?? `HTTP ${res.status}`, variant: "destructive" });
       }
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });

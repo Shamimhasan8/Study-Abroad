@@ -112,9 +112,10 @@ model Opportunity {
   exclusionsJson   String // string[]
   exclusionsBn     String? // string[] (Bangla)
   sourcesJson      String // SourceRef[]
-  reviewState    String // baseline_review | verified_current | stale
+  reviewState    String // baseline_review | verified_current | stale | pending_recheck
   retrievedAt    DateTime
   nextReviewAt   DateTime?
+  version        Int      @default(1) // optimistic concurrency for editorial publishes
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -172,7 +173,8 @@ model FactEvidence {
   reviewedAt      DateTime?
   confidence      String
   conflictNote    String?
-  createdAt       DateTime  @default(now())
+  expectedVersion Int? // opportunity version this extraction was made against
+  createdAt        DateTime  @default(now())
 
   reviewEvents ReviewEvent[]
 }
@@ -482,4 +484,17 @@ model GuestImport {
   completedAt DateTime?
 
   @@unique([userId, importKey])
+}
+
+model OpportunityVersion {
+  id              String   @id @default(cuid())
+  opportunitySlug String
+  version         Int
+  snapshotJson    String   // full prior row snapshot at this version
+  changedBy       String?
+  changeReason    String?
+  createdAt       DateTime @default(now())
+
+  @@unique([opportunitySlug, version])
+  @@index([opportunitySlug, createdAt])
 }
