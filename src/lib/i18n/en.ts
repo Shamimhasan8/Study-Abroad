@@ -487,6 +487,8 @@ export const en = {
   "plan.empty": "No plan yet",
   "plan.emptyBody": "Complete onboarding and pick a target to generate your plan.",
   "plan.generate": "Generate plan",
+  "plan.previewStale": "That preview expired or changed — showing a fresh one.",
+  "plan.previewPreserved": "Kept from your current plan: {completed} completed · {edited} edited",
   "plan.task.language": "Language",
   "plan.task.tests": "Tests",
   "plan.task.academic": "Academics",

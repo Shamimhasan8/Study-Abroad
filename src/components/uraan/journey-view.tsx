@@ -10,6 +10,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { apiPost } from "@/lib/api-client";
+import { parsePlanGenerateOk, type PlanConfirmation } from "@/lib/planning/replan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +36,10 @@ export function JourneyView() {
   const [explainBusy, setExplainBusy] = useState(false);
   const [explanation, setExplanation] = useState<{ text: string; aiGenerated: boolean } | null>(null);
   const [fly, setFly] = useState(false);
-  const [preview, setPreview] = useState<{ requiresConfirmation: boolean; plan: typeof plan } | null>(null);
+  /** Parsed through the SAME discriminated contract as the server response —
+   * the old bug stored the raw `{requiresConfirmation, preview}` body and
+   * then read `preview.plan`, which never existed. */
+  const [confirmation, setConfirmation] = useState<PlanConfirmation | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
@@ -70,35 +74,49 @@ export function JourneyView() {
     })();
   }, [goalSlug]);
 
-  const generate = async (confirmReplace = false) => {
+  const generate = async (opts: { confirm?: { token: string } } = {}) => {
     if (!goalSlug) return;
     setGenerating(true);
     try {
-      const body: Record<string, unknown> = { slug: goalSlug, confirmReplace };
+      const body: Record<string, unknown> = { slug: goalSlug };
       if (!user && profile) body.profile = profile;
+      if (opts.confirm) {
+        body.confirmReplace = true;
+        body.previewToken = opts.confirm.token;
+      }
       const res = await fetch("/api/plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const json = await res.json().catch(() => null);
-      if (json?.ok) {
-        if (json.data.requiresConfirmation) {
-          setPreview(json.data);
+      // Parse at the boundary through the shared contract — one field-name
+      // truth for server and client, so a preview can never be silently
+      // dropped again.
+      const ok = res.ok && json?.ok ? parsePlanGenerateOk(json.data) : null;
+      if (ok) {
+        if (ok.kind === "confirmation") {
+          setConfirmation(ok);
         } else {
-          setPlan(json.data.plan);
-          setPreview(null);
+          setPlan(ok.plan);
+          setConfirmation(null);
           // evaluate for gap display too
           const evRes = await fetch("/api/evaluate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify(body.confirm ? { slug: goalSlug } : body),
           });
           const evJson = await evRes.json();
           if (evJson.ok) setEvaluation(goalSlug, evJson.data.evaluation as EvaluationSummary);
           setFly(true);
           setTimeout(() => setFly(false), 1400);
         }
+      } else if (res.status === 409 || json?.error === "stale_preview" || json?.error === "preview_hash_mismatch") {
+        // The reviewed preview is gone/changed — fetch a fresh one instead of
+        // silently applying something the student never saw.
+        setConfirmation(null);
+        toast({ title: t("plan.previewStale"), variant: "destructive" });
+        void generate();
       } else {
         // Honest failure feedback: the spinner stopping with no result and
         // no message (e.g. 422 needs_profile for a guest with no profile,
@@ -264,14 +282,20 @@ export function JourneyView() {
         </CardContent>
       </Card>
 
-      {/* Regeneration preview gate */}
-      {preview?.requiresConfirmation && preview.plan && (
+      {/* Regeneration preview gate — shared contract; cancel mutates nothing. */}
+      {confirmation && (
         <Card className="mb-6 border-sunflower/60 bg-accent">
           <CardContent className="p-5">
             <h2 className="text-base font-semibold">{t("plan.replanPreview")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{t("plan.replanBody")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("plan.previewPreserved", {
+                completed: String(confirmation.preserved.completed),
+                edited: String(confirmation.preserved.edited),
+              })}
+            </p>
             <ul className="mt-3 max-h-64 overflow-y-auto uraan-scroll flex flex-col gap-1.5 text-sm">
-              {preview.plan.tasks.slice(0, 12).map((task) => (
+              {confirmation.preview.tasks.slice(0, 12).map((task) => (
                 <li key={task.id} className="flex items-center gap-2">
                   <span className={task.status === "done" ? "text-leaf" : "text-muted-foreground"}>
                     {task.status === "done" ? "✓" : "•"}
@@ -282,8 +306,15 @@ export function JourneyView() {
               ))}
             </ul>
             <div className="mt-4 flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setPreview(null)}>{t("common.cancel")}</Button>
-              <Button size="sm" onClick={() => generate(true)}>{t("common.confirm")}</Button>
+              <Button variant="outline" size="sm" onClick={() => setConfirmation(null)}>{t("common.cancel")}</Button>
+              <Button
+                size="sm"
+                onClick={() => generate({ confirm: { token: confirmation.previewToken } })}
+                disabled={generating}
+              >
+                {generating && <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {t("common.confirm")}
+              </Button>
             </div>
           </CardContent>
         </Card>

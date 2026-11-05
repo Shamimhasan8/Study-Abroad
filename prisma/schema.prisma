@@ -44,6 +44,8 @@ model User {
   notifications NotificationEvent[]
   reviewEvents ReviewEvent[]
   reminders    Reminder[]
+  planPreviews PlanPreview[]
+  mentorMessages MentorMessage[]
 }
 
 model Session {
@@ -258,6 +260,26 @@ model Task {
   @@unique([planId, stableKey])
 }
 
+/// Persisted replan proposal (Uraan replan contract). A confirmation
+/// response stores the EXACT reviewed tasks here; confirm applies this
+/// document — never a regenerated proposal — so preview and apply can never
+/// diverge. One-time use: the row is deleted on successful apply.
+model PlanPreview {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalSlug           String
+  proposalHash       String // sha256 over canonicalPreviewJson
+  previewJson        String // PlanPreviewDoc (Zod-validated at boundaries)
+  assumedIntake      Boolean  @default(false)
+  preservedCompleted Int      @default(0)
+  preservedEdited    Int      @default(0)
+  createdAt          DateTime @default(now())
+  expiresAt          DateTime
+
+  @@index([userId, createdAt])
+}
+
 // ===== Applications & reminders =====
 
 model Application {
@@ -463,6 +485,24 @@ model AuditEvent {
   createdAt  DateTime @default(now())
 
   @@index([createdAt])
+}
+
+/// Contextual mentor thread messages (user + mentor turns). Owned by the
+/// student; deletable history. Sanitized context/action metadata only —
+/// never private draft or document content.
+model MentorMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String // user | mentor
+  content     String
+  contextView String? // workspace | task | detail | explore …
+  contextRef  String? // task stableKey / opportunity slug when applicable
+  actionJson  String? // validated MentorActionProposal (allowlisted)
+  aiGenerated Boolean  @default(false) // false = labelled template fallback
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 

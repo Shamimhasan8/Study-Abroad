@@ -196,6 +196,9 @@ export const planGenerateSchema = z.object({
   slug: z.string().min(1).max(120),
   profile: profileSchema.optional(),
   confirmReplace: z.boolean().default(false),
+  /** Required with confirmReplace: the persisted preview token from the
+   * confirmation response (single replan contract — see planning/replan.ts). */
+  previewToken: z.string().min(8).max(64).optional(),
 });
 
 export const aiExplainSchema = z.object({

@@ -468,6 +468,8 @@ export const bn: Record<TranslationKey, string> = {
   "plan.empty": "এখনো প্ল্যান নেই",
   "plan.emptyBody": "অনবোর্ডিং শেষ করে টার্গেট বাছলে প্ল্যান তৈরি হবে।",
   "plan.generate": "প্ল্যান বানান",
+  "plan.previewStale": "সেই প্রিভিউটি মেয়াদোত্তীর্ণ বা বদলে গেছে — নতুন প্রিভিউ দেখানো হচ্ছে।",
+  "plan.previewPreserved": "আপনার বর্তমান প্ল্যান থেকে রাখা হয়েছে: {completed}টি সম্পন্ন · {edited}টি সম্পাদিত",
   "plan.task.language": "ভাষা",
   "plan.task.tests": "টেস্ট",
   "plan.task.academic": "পড়াশোনা",
