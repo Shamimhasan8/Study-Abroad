@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { notFound, unauthorized, serviceUnavailable } from "@/lib/validation";
 import { purgeDocument, readDocument } from "@/lib/documents/storage";
 
+export const dynamic = "force-dynamic";
+
 /** Authenticated, owner-checked download. Never a public path. */
 export async function GET(
   _request: Request,

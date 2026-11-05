@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { hashPassword, createSession, setSessionCookie } from "@/lib/identity/auth";
 import { registerSchema, badRequest, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Public registration ALWAYS creates a student account.
  *

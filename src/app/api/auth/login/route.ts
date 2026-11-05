@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { verifyPassword, createSession, setSessionCookie } from "@/lib/identity/auth";
 import { loginSchema, badRequest, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 const MAX_FAILURES = 8;
 const WINDOW_MINUTES = 15;
 

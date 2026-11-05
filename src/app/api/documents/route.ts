@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { documentPurposeSchema, badRequest, unauthorized, serverError, dataRoute } from "@/lib/validation";
 import { ALLOWED_EXTENSIONS, ALLOWED_MIME, maxUploadBytes, newStorageKey, purgeDocument, safeOriginalName, saveDocument, sha256, signatureMatches } from "@/lib/documents/storage";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return unauthorized();

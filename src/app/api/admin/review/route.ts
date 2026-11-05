@@ -4,6 +4,8 @@ import { badRequest, unauthorized, notFound, serverError } from "@/lib/validatio
 import { parseFieldPath, coerceFactValue } from "@/lib/editorial/fields";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const submitSchema = z.object({
   sourceKey: z.string().min(1).max(60),
   opportunitySlug: z.string().max(120).optional(),

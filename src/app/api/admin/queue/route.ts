@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/identity/auth";
 import { unauthorized, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /** Editorial workspace data: queue, source health, audit trail. */
 export async function GET() {
   const admin = await requireAdmin();

@@ -6,6 +6,8 @@ import { generatePlan } from "@/lib/planning/engine";
 import { planGenerateSchema, badRequest, notFound, serverError } from "@/lib/validation";
 import type { PlanData, PlanTask, ProfileData } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Plan generation. Guests receive the generated plan for local persistence;
  * signed-in users get it saved server-side. Regeneration preserves

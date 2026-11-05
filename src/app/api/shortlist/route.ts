@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { unauthorized, serverError } from "@/lib/validation";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const toggleSchema = z.object({ slug: z.string().min(1).max(120) });
 
 export async function GET() {

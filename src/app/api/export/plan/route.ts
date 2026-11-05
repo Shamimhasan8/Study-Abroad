@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { dataRoute, unauthorized } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /** Readable plan export (markdown) for printing or sharing with family. */
 export async function GET() {
   return dataRoute(async () => {

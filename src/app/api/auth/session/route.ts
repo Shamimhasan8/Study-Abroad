@@ -1,6 +1,8 @@
 import { getCurrentUser } from "@/lib/identity/auth";
 import { dataRoute } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   return dataRoute(async () => {
     const user = await getCurrentUser();

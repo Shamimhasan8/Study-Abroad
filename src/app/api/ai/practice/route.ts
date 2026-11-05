@@ -2,6 +2,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { practiceFeedback, templatePracticeFeedback } from "@/lib/ai/features";
 import { aiPracticeSchema, badRequest } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /** Practice feedback — an honest estimate, never an official band score. */
 function clientIp(request: Request): string | undefined {
   const fwd = request.headers.get("x-forwarded-for");

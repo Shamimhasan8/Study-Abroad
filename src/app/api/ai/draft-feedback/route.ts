@@ -4,6 +4,8 @@ import { draftFeedback } from "@/lib/ai/features";
 import { aiDraftFeedbackSchema, badRequest, notFound, unauthorized } from "@/lib/validation";
 import type { ProfileData } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Draft feedback on the student's own writing. Respects the target's
  * AI-use policy: when a draft is marked 'prohibited', feedback is

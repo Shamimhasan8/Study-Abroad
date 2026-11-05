@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { profileSchema, badRequest, unauthorized, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /** Save the onboarding profile (authenticated users). */
 export async function POST(request: Request) {
   const user = await getCurrentUser();

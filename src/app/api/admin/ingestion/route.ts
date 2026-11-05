@@ -3,6 +3,8 @@ import { runIngestion } from "@/lib/ingestion/runner";
 import { unauthorized, serverError } from "@/lib/validation";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Ingestion trigger. Two authorized callers:
  *

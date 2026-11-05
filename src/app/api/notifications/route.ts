@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { unauthorized, serverError } from "@/lib/validation";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const markSchema = z.object({ id: z.string().min(1).optional() });
 
 /** In-app notifications (source changes, reminders). No email/push yet. */

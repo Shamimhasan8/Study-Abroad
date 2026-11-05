@@ -5,6 +5,8 @@ import { evaluateOpportunity } from "@/lib/matching/engine";
 import { evaluateSchema, badRequest, notFound } from "@/lib/validation";
 import type { ProfileData } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Deterministic requirement evaluation. Works for guests (profile in the
  * request body) and signed-in users (profile from the database).

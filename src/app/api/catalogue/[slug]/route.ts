@@ -1,6 +1,8 @@
 import { getOpportunity, getCountryGuide } from "@/lib/catalogue/queries";
 import { dataRoute, notFound, publicJson } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> },

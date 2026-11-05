@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { dataRoute } from "@/lib/validation";
 import type { PlanData, ProfileData, PlanTask } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 /** Hydrate the client store for a signed-in user. Guests get empty state. */
 export async function GET() {
   return dataRoute(async () => {

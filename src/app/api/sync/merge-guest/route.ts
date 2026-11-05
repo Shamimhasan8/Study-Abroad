@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { mergeGuestSchema, badRequest, unauthorized, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /**
  * One-time guest → account migration with real idempotency.
  *

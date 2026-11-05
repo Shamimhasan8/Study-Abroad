@@ -6,6 +6,8 @@ import { explainEvaluation, templateExplanation } from "@/lib/ai/features";
 import { aiExplainSchema, badRequest, notFound } from "@/lib/validation";
 import type { ProfileData } from "@/lib/types";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Evidence-bound plan/gap explanation. The AI explains deterministic
  * results and never overrides them. Falls back to a labelled template.

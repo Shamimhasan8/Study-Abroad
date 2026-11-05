@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { languageLogSchema, badRequest, unauthorized, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return unauthorized();

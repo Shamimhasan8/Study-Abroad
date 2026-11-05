@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { buildICS, type IcsEvent } from "@/lib/dates";
 import { dataRoute, unauthorized } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Calendar export (.ics) — all-day events only. Date-only precision is
  * preserved; no time or timezone is ever invented.

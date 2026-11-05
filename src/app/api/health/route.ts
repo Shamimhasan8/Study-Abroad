@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Operational health check — DB reachability and catalogue size.
  * Readiness: returns 200 only when the database is reachable and counts

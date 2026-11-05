@@ -3,6 +3,8 @@ import { getCurrentUser, destroySession } from "@/lib/identity/auth";
 import { purgeDocument } from "@/lib/documents/storage";
 import { unauthorized, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Account deletion: removes profile, goals, plans, drafts, applications,
  * documents (files + rows), sessions, and notifications. Public source

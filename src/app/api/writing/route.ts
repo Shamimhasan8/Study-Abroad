@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { draftSchema, badRequest, unauthorized, notFound, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }

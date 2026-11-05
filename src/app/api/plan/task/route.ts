@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/identity/auth";
 import { taskPatchSchema, badRequest, unauthorized, notFound, serverError } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /** Task completion and notes — server-side ownership check included. */
 export async function POST(request: Request) {
   const user = await getCurrentUser();

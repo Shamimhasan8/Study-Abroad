@@ -1,6 +1,8 @@
 import { listOpportunities, listCountryGuides } from "@/lib/catalogue/queries";
 import { dataRoute, publicJson } from "@/lib/validation";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Public catalogue — no auth required (guest browsing works).
  * Bounded public caching (60s) keeps load low; editorial publishes are
