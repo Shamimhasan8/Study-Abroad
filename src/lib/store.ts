@@ -172,12 +172,24 @@ export const useAppStore = create<AppState>()(
         set({ exploreFilters: { ...get().exploreFilters, ...filters } }),
 
       applyFromUrl: (state) =>
+        // The URL is the SOURCE OF TRUTH in this direction (initial deep
+        // link + browser back/forward). Absent params must RESET to their
+        // defaults, not merge over current state: merging kept a popped
+        // filter (e.g. level=master after Back) alive in the store, and the
+        // store->URL sync then re-pushed it — cancelling the back/forward
+        // navigation entirely.
         set({
           view: state.view,
           detailSlug: state.detailSlug ?? null,
-          prepareTab: state.prepareTab ?? get().prepareTab,
-          compareSlugs: state.compareSlugs ?? get().compareSlugs,
-          exploreFilters: { ...get().exploreFilters, ...(state.exploreFilters ?? {}) },
+          prepareTab: state.prepareTab ?? "language",
+          compareSlugs: state.compareSlugs ?? [],
+          exploreFilters: {
+            query: "",
+            country: "all",
+            level: "all",
+            cycle: "all",
+            ...state.exploreFilters,
+          },
         }),
 
       setUser: (user) => set({ user }),
