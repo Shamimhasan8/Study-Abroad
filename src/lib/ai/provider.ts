@@ -30,6 +30,42 @@ interface CompleteOptions {
   json?: boolean;
 }
 
+/**
+ * Provider initialization. The SDK's file-based loader (`.z-ai-config` in
+ * cwd/home//etc) is IMPOSSIBLE on serverless hosts — the deployed
+ * fallback root cause: ZAI.create() threw, every feature degraded to
+ * `aiGenerated:false`. Hosts without a filesystem config MUST set
+ * ZAI_BASE_URL + ZAI_API_KEY env vars; we construct the client directly.
+ */
+/** The minimal client surface this adapter uses (structural type). */
+interface ZaiClient {
+  chat: {
+    completions: {
+      create: (body: {
+        messages: { role: "system" | "user" | "assistant"; content: string }[];
+        thinking?: { type: "enabled" | "disabled" };
+        max_tokens?: number;
+      }) => Promise<{
+        choices?: { message?: { content?: string } }[];
+        model?: unknown;
+      }>;
+    };
+  };
+}
+
+async function createClient(): Promise<ZaiClient | null> {
+  const baseUrl = process.env.ZAI_BASE_URL?.trim();
+  const apiKey = process.env.ZAI_API_KEY?.trim();
+  if (baseUrl && apiKey) {
+    // The SDK constructor is TS-private but structurally public; the cast
+    // documents exactly what we rely on (baseUrl + apiKey config).
+    const Ctor = ZAI as unknown as new (config: { baseUrl: string; apiKey: string }) => ZaiClient;
+    return new Ctor({ baseUrl, apiKey });
+  }
+  // Local/dev: file-based config (or the sandbox's /etc/.z-ai-config).
+  return ZAI.create().catch(() => null);
+}
+
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -114,7 +150,8 @@ export async function complete(opts: CompleteOptions): Promise<
   let lastError = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const zai = await ZAI.create();
+      const zai = await createClient();
+      if (!zai) throw new Error("provider_unconfigured");
       const completion = await withTimeout(
         zai.chat.completions.create({
           messages: [
