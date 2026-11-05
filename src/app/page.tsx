@@ -199,6 +199,27 @@ function Shell() {
           // account), then load this account's server truth.
           useAppStore.getState().syncOwner(user);
           useAppStore.getState().setUser(user);
+          // An open guest→account merge decision outranks hydration: the
+          // unmerged guest snapshot in the local cache must survive this
+          // load. Hydrating now would overwrite (and persist) server state
+          // over the snapshot with no prompt ever re-appearing. Instead,
+          // skip /api/state and re-open the merge dialog.
+          const cached = useAppStore.getState();
+          const hasLocalSnapshot = Boolean(
+            cached.profile ||
+              cached.plan ||
+              cached.shortlist.length > 0 ||
+              cached.applications.length > 0,
+          );
+          if (cached.mergePending && hasLocalSnapshot) {
+            setAuthOpen(true);
+            finish();
+            return;
+          }
+          if (cached.mergePending) {
+            // Stale flag with nothing left to merge — clear it and hydrate.
+            useAppStore.getState().setMergePending(false);
+          }
           try {
             const stateRes = await fetch("/api/state");
             const stateJson = await stateRes.json().catch(() => null);

@@ -12,7 +12,7 @@
  * - Retries reuse the same importId, so the server treats them as one
  *   import and never duplicates the plan.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import {
@@ -57,6 +57,21 @@ export function AuthDialog({
 
   const hasGuestData = Boolean(profile || plan || shortlist.length > 0);
 
+  // Restore an open guest→account merge decision after a reload: while a
+  // decision is pending, the unmerged guest snapshot must never be
+  // overwritten by /api/state hydration (page.tsx skips hydration and
+  // re-opens this dialog instead — see the mergePending store flag).
+  useEffect(() => {
+    if (!open || !user || mergePrompt || conflict) return;
+    const s = useAppStore.getState();
+    const hasLocalSnapshot = Boolean(
+      s.profile || s.plan || s.shortlist.length > 0 || s.applications.length > 0,
+    );
+    if (s.mergePending && hasLocalSnapshot) {
+      setMergePrompt(true);
+    }
+  }, [open, user, mergePrompt, conflict]);
+
   const authenticate = async () => {
     setBusy(true);
     try {
@@ -76,10 +91,12 @@ export function AuthDialog({
       const user = json.data.user as SessionUser;
       // Mark the cache owner BEFORE hydrating: an account-A cache is
       // discarded when account B signs in; guest data survives only for
-      // the explicit merge decision.
+      // the explicit merge decision. The decision is PERSISTED so a reload
+      // cannot clobber the unmerged snapshot with server state.
       useAppStore.getState().syncOwner(user);
       setUser(user);
       if (hasGuestData) {
+        useAppStore.getState().setMergePending(true);
         setMergePrompt(true); // explicit merge question before moving data
       } else {
         await hydrateServerState();
@@ -170,6 +187,7 @@ export function AuthDialog({
       }
 
       clearImportId();
+      useAppStore.getState().setMergePending(false); // decision made: merge confirmed
       resetDomain(); // only now — after the confirmed durable merge
       await hydrateServerState();
       onOpenChange(false);
@@ -211,6 +229,7 @@ export function AuthDialog({
       const json = await res.json().catch(() => null);
       if (res.ok && json?.ok) {
         clearImportId();
+        useAppStore.getState().setMergePending(false); // decision made: keep server
         resetDomain();
         await hydrateServerState();
         onOpenChange(false);
@@ -225,6 +244,7 @@ export function AuthDialog({
   };
 
   const skipMerge = async () => {
+    useAppStore.getState().setMergePending(false); // decision made: discard guest copy
     resetDomain();
     await hydrateServerState();
     onOpenChange(false);

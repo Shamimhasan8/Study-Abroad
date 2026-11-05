@@ -68,6 +68,12 @@ interface AppState {
   // guest→account merge idempotency key (persisted; one per snapshot)
   importId: string | null;
 
+  /** True while a guest→account merge decision is still open (signed-in,
+   * unmerged guest snapshot in local cache). Persisted so a reload cannot
+   * silently clobber the snapshot with server state — the decision dialog
+   * re-opens instead. Cleared by every merge outcome (merge/keep/skip). */
+  mergePending: boolean;
+
   /** Live catalogue stats — derived, never hardcoded. status distinguishes
    * loading / ok / error so UI copy can degrade honestly. */
   stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" };
@@ -96,6 +102,7 @@ interface AppState {
   setStats: (stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" }) => void;
   ensureImportId: () => string;
   clearImportId: () => void;
+  setMergePending: (pending: boolean) => void;
   setProfile: (profile: ProfileData | null) => void;
   patchProfile: (partial: Partial<ProfileData>) => void;
 
@@ -132,6 +139,8 @@ export const useAppStore = create<AppState>()(
       hydrated: false,
 
       importId: null,
+
+      mergePending: false,
 
       stats: { opportunities: null, sources: null, status: "loading" },
 
@@ -183,7 +192,8 @@ export const useAppStore = create<AppState>()(
           set({ ownerKey: key });
         } else {
           // logout, or account A → account B: discard the previous owner's
-          // cached domain state entirely.
+          // cached domain state entirely (including any merge decision that
+          // belonged to that owner's session).
           set({
             ownerKey: key,
             profile: null,
@@ -193,6 +203,7 @@ export const useAppStore = create<AppState>()(
             applications: [],
             evaluations: {},
             importId: null,
+            mergePending: false,
           });
         }
       },
@@ -213,6 +224,8 @@ export const useAppStore = create<AppState>()(
       },
 
       clearImportId: () => set({ importId: null }),
+
+      setMergePending: (mergePending) => set({ mergePending }),
 
       setProfile: (profile) => set({ profile }),
 
@@ -286,6 +299,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         ownerKey: state.ownerKey,
         importId: state.importId,
+        mergePending: state.mergePending,
         profile: state.profile,
         plan: state.plan,
         goalSlug: state.goalSlug,
