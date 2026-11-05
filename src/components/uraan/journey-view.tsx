@@ -81,8 +81,8 @@ export function JourneyView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const json = await res.json();
-      if (json.ok) {
+      const json = await res.json().catch(() => null);
+      if (json?.ok) {
         if (json.data.requiresConfirmation) {
           setPreview(json.data);
         } else {
@@ -99,9 +99,18 @@ export function JourneyView() {
           setFly(true);
           setTimeout(() => setFly(false), 1400);
         }
+      } else {
+        // Honest failure feedback: the spinner stopping with no result and
+        // no message (e.g. 422 needs_profile for a guest with no profile,
+        // or a 5xx) left the user pressing Generate with zero explanation.
+        toast({
+          title: json?.error === "needs_profile" ? t("journey.needsProfile") : t("journey.generateFailed"),
+          variant: "destructive",
+        });
       }
     } catch {
-      /* network error — keep prior plan */
+      // Network failure — keep the prior plan, but say so.
+      toast({ title: t("journey.generateFailed"), variant: "destructive" });
     } finally {
       setGenerating(false);
     }

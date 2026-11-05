@@ -187,6 +187,8 @@ export const en = {
 
   // Journey dashboard
   "journey.title": "My Journey",
+  "journey.needsProfile": "A starting profile is needed before a plan can be built — answer the first onboarding questions and try again.",
+  "journey.generateFailed": "Plan generation failed. Your existing plan (if any) is untouched — please retry.",
   "journey.noGoal": "No active goal yet",
     "journey.taskRetry": "The completion did not save — the tick was undone. Try again in a moment.",
 "journey.noGoalBody": "Pick a target opportunity and your journey dashboard comes alive.",
