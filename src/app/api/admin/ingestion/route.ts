@@ -8,10 +8,16 @@ export const dynamic = "force-dynamic";
 /**
  * Ingestion trigger. Two authorized callers:
  *
- * 1. A signed-in admin (button in the admin view) — cookie session.
- * 2. A deployment scheduler (Vercel Cron) — `Authorization: Bearer
- *    $INGESTION_CRON_SECRET`. A machine caller never needs an admin
- *    session cookie, and the secret is never a user credential.
+ * 1. A signed-in admin (button in the admin view) — POST with a cookie
+ *    session. A GET request never accepts a session: side effects must not
+ *    be triggerable through ambient cookie auth (CSRF-safe by design).
+ * 2. A deployment scheduler (Vercel Cron) — which sends GET with
+ *    `Authorization: Bearer $INGESTION_CRON_SECRET`. A machine caller never
+ *    needs an admin session cookie, and the secret is never a user
+ *    credential.
+ *
+ * Vercel Cron invokes GET, so the cron path is exposed on GET; POST stays
+ * the admin path. Both share one audited runner.
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -20,8 +26,7 @@ export async function POST(request: Request) {
     cronSecret &&
     authHeader.startsWith("Bearer ") &&
     authHeader.slice(7).length === cronSecret.length &&
-    // constant-time-ish compare to avoid a length oracle on the secret
-    // (values are equal-length; compare via timingSafeEqual)
+    // constant-time compare (values are equal-length)
     safeEqual(authHeader.slice(7), cronSecret);
 
   let actorId: string | null = null;
@@ -30,7 +35,23 @@ export async function POST(request: Request) {
     if (!admin) return unauthorized();
     actorId = admin.id;
   }
+  return runAndAudit(request, actorId, Boolean(isCron));
+}
 
+/** Scheduler entry point (Vercel Cron sends GET + Bearer secret). */
+export async function GET(request: Request) {
+  const authHeader = request.headers.get("authorization") ?? "";
+  const cronSecret = process.env.INGESTION_CRON_SECRET;
+  const isCron =
+    cronSecret &&
+    authHeader.startsWith("Bearer ") &&
+    authHeader.slice(7).length === cronSecret.length &&
+    safeEqual(authHeader.slice(7), cronSecret);
+  if (!isCron) return unauthorized();
+  return runAndAudit(request, null, true);
+}
+
+async function runAndAudit(request: Request, actorId: string | null, viaCron: boolean) {
   try {
     const url = new URL(request.url);
     const volatility = url.searchParams.get("volatility") ?? undefined;
@@ -38,12 +59,12 @@ export async function POST(request: Request) {
     await db.auditEvent.create({
       data: {
         actorId,
-        action: isCron ? "ingestion_run_cron" : "ingestion_run",
+        action: viaCron ? "ingestion_run_cron" : "ingestion_run",
         targetType: "ingestion",
         detailJson: JSON.stringify({
           sources: result.outcomes.length,
           failed: result.outcomes.filter((o) => o.status === "failed").length,
-          via: isCron ? "cron" : "admin",
+          via: viaCron ? "cron" : "admin",
         }),
       },
     });

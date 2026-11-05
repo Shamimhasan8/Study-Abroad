@@ -148,10 +148,15 @@ Public registration can now NEVER mint an admin (audited fix).
 }
 ```
 
-Set `INGESTION_CRON_SECRET` on Vercel; Vercel Cron calls receive an
-`Authorization: Bearer` header with that secret. The route accepts either
-the cron secret or an admin session — a machine never borrows a human
-cookie. Runs persist in `IngestionJob` + `AuditEvent`.
+Set `INGESTION_CRON_SECRET` on Vercel; Vercel Cron calls the path with GET
+and an `Authorization: Bearer` header carrying that secret — the route
+accepts the cron secret on **GET** (machine credential only; a GET never
+accepts an admin session cookie, so schedulers can never borrow a human
+identity and CSRF is impossible by construction). Signed-in admins use the
+**POST** button in the admin view. Runs persist in `IngestionJob` +
+`AuditEvent` with a `via: cron|admin` marker. After the first scheduled
+run, verify a `done`/`failed` job row and review-queue entries exist
+before relying on the pipeline.
 
 ## Step 5 — AI provider
 
