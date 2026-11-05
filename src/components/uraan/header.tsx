@@ -53,6 +53,8 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
   const { t, lang, setLang } = useI18n();
   const { view, navigate, user, setUser, syncOwner } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // True once the official sticker asset exists at the documented slot.
+  const [stickerOk, setStickerOk] = useState(false);
 
   const go = (next: View) => {
     navigate(next);
@@ -126,9 +128,20 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
           <span className="text-lg font-bold tracking-tight">{t("app.name")}</span>
         </button>
 
-        {/* Competition notice — official organizer sticker placeholder.
-            The official asset was not retrievable in the build environment;
-            this is an honest link badge, not a replica. */}
+        {/* Competition notice — OFFICIAL ORGANIZER STICKER SLOT.
+            Drop the official sticker asset at public/badges/ai-ignite-2026.svg
+            (or .png) and it automatically replaces this honest link badge.
+            The official asset could not be retrieved in the build
+            environment; this text badge is an identified placeholder, NOT a
+            replica and NOT a compliance claim. */}
+        <img
+          src="/badges/ai-ignite-2026.svg"
+          alt=""
+          aria-hidden="true"
+          className="absolute h-0 w-0 overflow-hidden"
+          onLoad={() => setStickerOk(true)}
+          onError={() => setStickerOk(false)}
+        />
         <a
           href="https://yunet-aignite26.devpost.com/"
           target="_blank"
@@ -136,8 +149,18 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
           className="hidden sm:inline-flex items-center gap-1 rounded-full border border-coral/40 bg-accent px-2.5 py-0.5 text-xs font-medium text-foreground/75 hover:border-coral transition-colors"
           title="YuNet AI Ignite 2026 — Devpost"
         >
-          AI Ignite 2026
-          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          {stickerOk ? (
+            <img
+              src="/badges/ai-ignite-2026.svg"
+              alt="YuNet AI Ignite 2026 — official sticker"
+              className="h-6 w-auto"
+            />
+          ) : (
+            <>
+              AI Ignite 2026
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </>
+          )}
         </a>
 
         {/* Primary nav (desktop) */}
