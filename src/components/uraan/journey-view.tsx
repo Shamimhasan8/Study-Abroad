@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { MilestonePath, PaperPlaneFlight } from "./illustrations";
 import { PHASE_LABELS, phaseOfTask } from "@/lib/planning/engine";
-import { deadlineLabel } from "@/lib/dates";
+import { deadlineExpired, deadlineLabel } from "@/lib/dates";
 import type { EvaluationSummary, NotificationItem, Opportunity } from "@/lib/types";
 import {
   Map, Target, CalendarClock, ClipboardList, Sparkles, Loader2, CircleCheck, CircleX, CircleHelp, ShieldQuestion,
@@ -401,6 +401,8 @@ export function JourneyView() {
                 {goalOpportunity.deadlines.filter((d) => d.closeDate).map((d) => (
                   <p key={d.id} className="text-xs text-muted-foreground">
                     {d.official ? t("cal.official") : t("cal.suggested")}: {deadlineLabel(d.precision, d.closeDate!, lang)}
+                    {/* A closed round must not read as an upcoming date. */}
+                    {deadlineExpired(d.closeDate!) ? ` — ${t("detail.roundExpired")}` : ""}
                   </p>
                 ))}
               </div>

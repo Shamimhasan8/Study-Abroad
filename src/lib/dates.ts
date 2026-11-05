@@ -42,6 +42,49 @@ export function monthsBetween(from: Date, to: Date): number {
   return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
 }
 
+// ---------- Deadline round selection (display) ----------
+
+export interface DeadlineDisplay<T> {
+  event: T;
+  /** True when this round's close date is in the past (round closed). */
+  expired: boolean;
+}
+
+/**
+ * Compact-surface selection (list cards, compare): the NEXT upcoming dated
+ * round — earliest future closeDate, with today itself still counting as
+ * open. When every round has closed, the most recent past round is returned
+ * and flagged expired so callers can label it honestly instead of presenting
+ * a closed round as current (the old `deadlines.find(d => d.closeDate)`
+ * picked the FIRST array entry — an expired Early Action over a live
+ * Regular Action). Never invents a date; null when no dated rounds exist.
+ * The planning engine's anchorDeadline stays authoritative for scheduling.
+ */
+export function nextDeadlineDisplay<T extends { closeDate?: string }>(
+  deadlines: T[],
+): DeadlineDisplay<T> | null {
+  const dated = deadlines
+    .map((event) => {
+      const t = event.closeDate ? parseISODate(event.closeDate)?.getTime() : undefined;
+      return t === undefined ? null : { event, t };
+    })
+    .filter((x): x is { event: T; t: number } => x !== null);
+  if (dated.length === 0) return null;
+  const today = parseISODate(todayISO())?.getTime() ?? Date.now();
+  const upcoming = dated.filter((x) => x.t >= today).sort((a, b) => a.t - b.t);
+  if (upcoming.length > 0) return { event: upcoming[0].event, expired: false };
+  const past = dated.filter((x) => x.t < today).sort((a, b) => b.t - a.t);
+  return past.length > 0 ? { event: past[0].event, expired: true } : null;
+}
+
+/** Per-round state for detail surfaces that list every dated round. */
+export function deadlineExpired(closeDate: string): boolean {
+  const t = parseISODate(closeDate)?.getTime();
+  if (t === undefined) return false;
+  const today = parseISODate(todayISO())?.getTime() ?? Date.now();
+  return t < today;
+}
+
 /** Human label honoring precision — never invents a day. */
 export function deadlineLabel(
   precision: DatePrecision,

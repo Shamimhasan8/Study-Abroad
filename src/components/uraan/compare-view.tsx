@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Scale, X, ExternalLink } from "lucide-react";
-import { deadlineLabel } from "@/lib/dates";
+import { deadlineLabel, nextDeadlineDisplay } from "@/lib/dates";
 import { formatForeign } from "@/lib/money";
 import type { Opportunity } from "@/lib/types";
 
@@ -139,16 +139,25 @@ export function CompareView() {
                   </div>
                 ))}
                 {row(t("detail.dates"), (o) => {
-                  const close = o.deadlines.find((d) => d.closeDate);
+                  // Next UPCOMING round — not the first array entry (that
+                  // showed an expired Early Action while a live Regular
+                  // Action existed).
+                  const next = nextDeadlineDisplay(o.deadlines);
                   return (
                     <div className="flex flex-col gap-1">
                       <span className="text-xs text-muted-foreground">{o.deadlineNote.split(".")[0]}.</span>
-                      {close?.closeDate && (
-                        <Badge variant="outline" className={close.official ? "border-leaf/50 bg-secondary" : "text-muted-foreground"}>
-                          {deadlineLabel(close.precision, close.closeDate, lang)}
-                        </Badge>
+                      {next?.event.closeDate && (
+                        next.expired ? (
+                          <span className="text-xs text-muted-foreground">
+                            {t("explore.roundClosed", { date: deadlineLabel(next.event.precision, next.event.closeDate, lang) })}
+                          </span>
+                        ) : (
+                          <Badge variant="outline" className={next.event.official ? "border-leaf/50 bg-secondary" : "text-muted-foreground"}>
+                            {deadlineLabel(next.event.precision, next.event.closeDate, lang)}
+                          </Badge>
+                        )
                       )}
-                      {!close && <span className="text-xs text-muted-foreground">{dash}</span>}
+                      {!next && <span className="text-xs text-muted-foreground">{dash}</span>}
                     </div>
                   );
                 })}

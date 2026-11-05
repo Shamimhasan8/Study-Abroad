@@ -20,7 +20,7 @@ import {
   ArrowLeft, ExternalLink, Bookmark, Target, Loader2, Sparkles, CircleCheck, CircleX,
   CircleHelp, Building2, CalendarClock, FileWarning, Landmark, ShieldQuestion,
 } from "lucide-react";
-import { deadlineLabel } from "@/lib/dates";
+import { deadlineExpired, deadlineLabel } from "@/lib/dates";
 import { formatBdt, formatForeign } from "@/lib/money";
 import { buildFundingWorksheet, contributionContext, worksheetCurrencies } from "@/lib/funding/engine";
 import type { EvaluationSummary, Opportunity } from "@/lib/types";
@@ -159,7 +159,7 @@ export function OpportunityDetailView() {
       result === "needs_institution_confirmation" ? "match.needsConfirm" : "match.notApplicable"
     );
 
-  const close = opportunity.deadlines.find((d) => d.closeDate);
+  const datedRounds = opportunity.deadlines.filter((d) => d.closeDate);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
@@ -297,13 +297,23 @@ export function OpportunityDetailView() {
               <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-leaf" aria-hidden="true" />
               <div>
                 <p className="text-foreground/85">{opportunity.deadlineNote}</p>
-                {close?.closeDate && (
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {close.official ? t("cal.official") : t("cal.suggested")}:{" "}
-                    {deadlineLabel(close.precision, close.closeDate, lang)}
-                    {close.note ? ` — ${close.note}` : ""}
-                  </p>
-                )}
+                {/* Every dated round with its own state: a record with Early
+                    Action and Regular Action shows BOTH — the expired round
+                    labelled closed, the upcoming round labelled open — instead
+                    of surfacing only the first array entry. */}
+                {datedRounds.map((d) => {
+                  const expired = deadlineExpired(d.closeDate!);
+                  return (
+                    <p key={d.id} className="mt-1.5 text-xs text-muted-foreground">
+                      {d.official ? t("cal.official") : t("cal.suggested")}:{" "}
+                      {deadlineLabel(d.precision, d.closeDate!, lang)} —{" "}
+                      <span className={expired ? "font-medium text-coral" : "font-medium text-leaf"}>
+                        {expired ? t("detail.roundExpired") : t("detail.roundUpcoming")}
+                      </span>
+                      {d.note ? ` — ${d.note}` : ""}
+                    </p>
+                  );
+                })}
                 <p className="mt-1 text-xs text-muted-foreground">{t("cal.precisionNote")}</p>
               </div>
             </div>

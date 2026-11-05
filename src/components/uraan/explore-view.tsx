@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Compass, Bookmark, Scale, Eye } from "lucide-react";
-import { deadlineLabel } from "@/lib/dates";
+import { deadlineLabel, nextDeadlineDisplay } from "@/lib/dates";
 import type { Opportunity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -280,7 +280,9 @@ export function ExploreView() {
           {filtered.map((o) => {
             const shortlisted = shortlist.includes(o.slug);
             const comparing = compareSlugs.includes(o.slug);
-            const close = o.deadlines.find((d) => d.closeDate);
+            // Next UPCOMING round — not the first array entry (that showed an
+            // expired Early Action while a live Regular Action existed).
+            const next = nextDeadlineDisplay(o.deadlines);
             return (
               <Card key={o.slug} className="flex flex-col border-border/70 bg-card transition-shadow hover:shadow-sm">
                 <CardContent className="flex flex-1 flex-col gap-3 p-5">
@@ -302,7 +304,11 @@ export function ExploreView() {
 
                   <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>
-                      {close?.closeDate ? deadlineLabel(close.precision, close.closeDate, lang) : t("detail.unknownField")}
+                      {next?.event.closeDate
+                        ? next.expired
+                          ? t("explore.roundClosed", { date: deadlineLabel(next.event.precision, next.event.closeDate, lang) })
+                          : deadlineLabel(next.event.precision, next.event.closeDate, lang)
+                        : t("detail.unknownField")}
                     </span>
                   </div>
 
