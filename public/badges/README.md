@@ -1,29 +1,37 @@
-# Official organizer sticker slot
+# Official organizer sticker
 
 The competition header badge reads its asset from this directory:
 
 ```
-public/badges/ai-ignite-2026.svg   (or .png)
+public/badges/ai-ignite-2026.png        (displayed — identity crop)
+public/badges/ai-ignite-2026-original.png (unmodified 300×300 original)
 ```
 
-**This slot is intentionally empty.** The official YuNet AI Ignite 2026
-sticker could not be retrieved from the build environment (no Devpost
-asset access). Until the owner places the official asset here, the header
-shows an honest text link badge — a clearly identified placeholder, not a
-replica of the sticker and not a compliance claim.
+**The official YuNet AI Ignite Buildathon 2026 sticker is present.** It
+was retrieved on 2026-11-05 from the organizer's event page
+(https://yunet-aignite26.devpost.com/ — the challenge thumbnail published
+by the organizers on the Devpost CDN). Provenance, licence basis, and the
+crop rationale are documented in `docs/ASSET_PROVENANCE.md`.
 
-## To activate the official sticker
+## Why two files?
 
-1. Download the official sticker from the Devpost hackathon page
-   (https://yunet-aignite26.devpost.com/) — use the organizer-provided
-   asset, not a recreation.
-2. Save it as `ai-ignite-2026.svg` or `ai-ignite-2026.png` in this folder.
-   Both filenames are honoured automatically — no code change needed.
+- `ai-ignite-2026-original.png` — the exact organizer download, untouched.
+- `ai-ignite-2026.png` — a crop of the original limited to the identity
+  band (head-profile icon + "AIgnite" wordmark). The full lockup is
+  illegible at header sizes; the implementation prompt requires a
+  **readable** placement in both shells, so the header displays the
+  identity band while the original ships alongside it.
+
+## How rendering works
 
 The sticker's availability is probed **server-side** by
 `/api/capabilities` (an fs check on this directory, cached ~10 minutes)
-and flows to the header through the app store: when the asset exists,
+and flows to the header through the app store. When the asset exists,
 the official sticker renders automatically (height-constrained,
-alt-labeled); when it does not, the honest text badge remains. The
-header never requests a missing asset, so an empty slot produces no 404
-noise in server logs or the browser console.
+alt-labeled, linking to the event page); when it does not, the honest
+text-pill badge remains — never a replica. The header never requests a
+missing asset, so an empty slot produces no 404 noise in server logs or
+the browser console.
+
+To replace the artwork with a different official version, overwrite both
+files (keep the same names) — no code change needed.
