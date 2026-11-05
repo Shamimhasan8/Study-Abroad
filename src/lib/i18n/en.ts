@@ -6,6 +6,8 @@ export const en = {
   // Navigation
   "nav.explore": "Explore",
   "nav.journey": "My Journey",
+  "nav.workspace": "Workspace",
+  "nav.funding": "Funding",
   "nav.prepare": "Prepare",
   "nav.applications": "Applications",
   "nav.calendar": "Calendar",

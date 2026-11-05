@@ -74,6 +74,10 @@ export const planGenerateOkSchema = z.discriminatedUnion("kind", [
     kind: z.literal("plan"),
     plan: planDataIoSchema,
     assumedIntake: z.boolean(),
+    /** True when this plan is a SCENARIO PREVIEW: generated from
+     * not-yet-saved constraints and NOT applied server-side. Cancel keeps
+     * everything untouched; apply = save profile, then generate. */
+    scenario: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal("confirmation"),

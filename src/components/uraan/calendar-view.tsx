@@ -154,7 +154,7 @@ export function CalendarView() {
             <p className="text-sm text-muted-foreground">{t("cal.noDates")}</p>
             <div className="mt-4 flex justify-center gap-3">
               <Button variant="outline" onClick={() => navigate("explore")}>{t("nav.explore")}</Button>
-              <Button variant="outline" onClick={() => navigate("journey")}>{t("plan.generate")}</Button>
+              <Button variant="outline" onClick={() => navigate("workspace")}>{t("plan.generate")}</Button>
             </div>
           </CardContent>
         </Card>

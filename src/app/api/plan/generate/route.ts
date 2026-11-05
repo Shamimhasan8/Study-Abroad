@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
     const parsed = planGenerateSchema.safeParse(body);
     if (!parsed.success) return badRequest("invalid_input");
-    const { slug, profile: guestProfile, confirmReplace, previewToken } = parsed.data;
+    const { slug, profile: guestProfile, confirmReplace, previewToken, scenario } = parsed.data;
 
     const opportunity = await getOpportunity(slug);
     if (!opportunity) return notFound();
@@ -50,6 +50,17 @@ export async function POST(request: Request) {
     if (!profile && guestProfile) profile = guestProfile;
     if (!profile) {
       return Response.json({ ok: false, error: "needs_profile" }, { status: 422 });
+    }
+    // Scenario overrides: preview-only profile merge (never persisted).
+    if (scenario && !confirmReplace) {
+      profile = {
+        ...profile,
+        ...(scenario.weeklyHours !== undefined ? { weeklyHours: scenario.weeklyHours } : {}),
+        ...(scenario.targetIntakeYear !== undefined ? { targetIntakeYear: scenario.targetIntakeYear } : {}),
+        ...(scenario.targetIntakeTerm !== undefined ? { targetIntakeTerm: scenario.targetIntakeTerm } : {}),
+        ...(scenario.annualContributionBdt !== undefined ? { annualContributionBdt: scenario.annualContributionBdt } : {}),
+        ...(scenario.upfrontFundsBdt !== undefined ? { upfrontFundsBdt: scenario.upfrontFundsBdt } : {}),
+      };
     }
 
     // ---------- Confirmation: apply the persisted, reviewed proposal ----------
@@ -120,6 +131,26 @@ export async function POST(request: Request) {
     // ---------- Generate a fresh proposal ----------
     const evaluation = evaluateOpportunity(opportunity.requirements, profile, slug);
     const { plan, assumedIntake } = generatePlan(profile, opportunity, evaluation);
+
+    // Scenario requests are PREVIEW-ONLY for everyone: cancel must mutate
+    // nothing, so the proposal is never applied here. Apply = save the
+    // profile, then generate normally (confirmation gate included).
+    if (scenario && !confirmReplace) {
+      const preserved = user ? await loadPreserved(user.id) : new Map<string, PreservedTask>();
+      const previewTasks = mergePreservedTasks(plan.tasks, preserved).map((t, idx) => ({
+        ...t,
+        id: `scenario-${idx}`,
+      }));
+      return Response.json({
+        ok: true,
+        data: {
+          kind: "plan",
+          plan: { ...plan, id: `scenario-preview-${Date.now()}`, tasks: previewTasks },
+          assumedIntake,
+          scenario: true,
+        },
+      });
+    }
 
     if (!user) {
       // Guest: return the plan; the client persists it locally. Guests never

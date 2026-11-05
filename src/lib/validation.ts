@@ -199,6 +199,18 @@ export const planGenerateSchema = z.object({
   /** Required with confirmReplace: the persisted preview token from the
    * confirmation response (single replan contract — see planning/replan.ts). */
   previewToken: z.string().min(8).max(64).optional(),
+  /** Scenario overrides for PREVIEW ONLY — merged over the effective profile
+   * for this request, never persisted. Apply = save the profile, then
+   * generate. Ignored on confirm (the persisted preview is the truth). */
+  scenario: z
+    .object({
+      weeklyHours: z.number().int().min(1).max(80).optional(),
+      targetIntakeYear: z.number().int().min(2025).max(2035).optional(),
+      targetIntakeTerm: z.enum(["fall", "spring"]).optional(),
+      annualContributionBdt: z.number().int().min(0).max(100_000_000).optional(),
+      upfrontFundsBdt: z.number().int().min(0).max(100_000_000).optional(),
+    })
+    .optional(),
 });
 
 export const aiExplainSchema = z.object({

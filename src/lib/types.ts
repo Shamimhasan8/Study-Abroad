@@ -429,6 +429,38 @@ export interface NotificationItem {
   createdAt: string;
 }
 
+// ---------- Service capabilities (ordinary-language product states) ----------
+
+export interface ServiceCapabilities {
+  browsing: { available: boolean; mode: "database" | "seed-fallback" };
+  accountSync: { available: boolean };
+  privateUploads: { available: boolean; storage: string };
+  liveMentor: { available: boolean };
+  probedAt: string;
+}
+
+// ---------- Contextual mentor ----------
+
+/** Mentor action proposals — allowlisted and previewed before applying. */
+export type MentorAction =
+  | { type: "open_requirement"; ruleId?: string; label: string }
+  | { type: "open_source"; sourceKey?: string; label: string }
+  | { type: "start_task"; stableKey?: string; label: string }
+  | { type: "request_profile_field"; field?: string; label: string }
+  | { type: "propose_task"; title?: string; label: string }
+  | { type: "preview_replan"; label: string };
+
+export interface MentorThreadMessage {
+  id: string;
+  role: "user" | "mentor";
+  content: string;
+  /** Short provenance line, e.g. "Requirements checked: 3 met, 2 gaps". */
+  basis?: string;
+  actions?: MentorAction[];
+  aiGenerated?: boolean;
+  createdAt: string;
+}
+
 // ---------- API envelope ----------
 
 export type ApiResult<T> =

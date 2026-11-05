@@ -66,7 +66,7 @@ export function HomeView() {
           <div className="mt-7 flex flex-wrap gap-3">
             <Button
               size="lg"
-              onClick={() => navigate(hasProgress ? "journey" : "onboarding")}
+              onClick={() => navigate(hasProgress ? "workspace" : "onboarding")}
               className="gap-2"
             >
               <Compass className="h-4 w-4" aria-hidden="true" />

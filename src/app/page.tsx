@@ -4,42 +4,58 @@
  * Uraan application shell.
  *
  * Navigation is durable-URL driven: every screen is addressable through
- * query parameters on / (view, slug, tab, ids, dest, level, cycle, q —
- * non-sensitive only; no personal profile data ever enters the URL).
+ * query parameters on / (view, slug, task, tab, ids, dest, level, cycle, q
+ * — non-sensitive only; no personal profile data ever enters the URL).
  * The hosting sandbox exposes a single app route, so this delivers deep
  * links, refresh persistence, and back/forward history without multi-path
  * routes; the owner's deployment can promote these to real paths later
  * (documented in DEPLOYMENT.md).
+ *
+ * Two related shells (04 contract §C): a public discovery shell (compact
+ * top navigation) and a student workspace shell (side navigation, working
+ * canvas, contextual mentor rail; drawer + bottom navigation on small
+ * screens). Legacy ?view=journey deep links resolve to the workspace
+ * through an explicit compatibility alias.
  */
 import { useEffect, useRef, useState } from "react";
 import { I18nProvider, useI18n } from "@/lib/i18n";
-import { useAppStore, type ExploreFilters, type PrepareTab, type View } from "@/lib/store";
+import { useAppStore, VIEW_ALIASES, type ExploreFilters, type PrepareTab, type View } from "@/lib/store";
 import { UraanHeader } from "@/components/uraan/header";
 import { UraanFooter } from "@/components/uraan/footer";
+import { WorkspaceShell } from "@/components/uraan/shell/workspace-shell";
 import { HomeView } from "@/components/uraan/home-view";
 import { OnboardingView } from "@/components/uraan/onboarding-view";
-import { JourneyView } from "@/components/uraan/journey-view";
+import { WorkspaceView } from "@/components/uraan/workspace/workspace-view";
+import { TaskView } from "@/components/uraan/workspace/task-view";
 import { ExploreView } from "@/components/uraan/explore-view";
 import { OpportunityDetailView } from "@/components/uraan/opportunity-detail";
 import { CompareView } from "@/components/uraan/compare-view";
 import { PrepareView } from "@/components/uraan/prepare/prepare-view";
 import { ApplicationsView } from "@/components/uraan/applications-view";
 import { CalendarView } from "@/components/uraan/calendar-view";
+import { FundingView } from "@/components/uraan/funding/funding-view";
 import { SourcesView } from "@/components/uraan/sources-view";
 import { SettingsView } from "@/components/uraan/settings-view";
 import { AdminView } from "@/components/uraan/admin-view";
 import { AuthDialog } from "@/components/uraan/auth-dialog";
+import type { ServiceCapabilities } from "@/lib/types";
 
 const VALID_VIEWS: View[] = [
-  "home", "onboarding", "journey", "explore", "detail", "compare",
-  "prepare", "applications", "calendar", "sources", "admin", "settings",
+  "home", "onboarding", "workspace", "task", "explore", "detail", "compare",
+  "prepare", "applications", "calendar", "funding", "sources", "admin", "settings",
 ];
 const VALID_TABS: PrepareTab[] = ["language", "experience", "writing", "recommenders", "research", "documents"];
+
+/** Views that render inside the student workspace shell. */
+const WORKSPACE_VIEWS: View[] = [
+  "workspace", "task", "prepare", "applications", "calendar", "funding", "settings", "admin",
+];
 
 /** Build the canonical query string for the current navigation state. */
 function urlOf(state: {
   view: View;
   detailSlug: string | null;
+  activeTaskId: string | null;
   prepareTab: PrepareTab;
   compareSlugs: string[];
   exploreFilters: ExploreFilters;
@@ -47,6 +63,7 @@ function urlOf(state: {
   const params = new URLSearchParams();
   params.set("view", state.view);
   if (state.view === "detail" && state.detailSlug) params.set("slug", state.detailSlug);
+  if (state.view === "task" && state.activeTaskId) params.set("task", state.activeTaskId);
   if (state.view === "prepare" && state.prepareTab !== "language") params.set("tab", state.prepareTab);
   if (state.view === "compare" && state.compareSlugs.length > 0) params.set("ids", state.compareSlugs.join(","));
   if (state.view === "explore") {
@@ -64,16 +81,20 @@ function urlOf(state: {
 function stateOfUrl(): {
   view: View;
   detailSlug?: string | null;
+  activeTaskId?: string | null;
   prepareTab?: PrepareTab;
   compareSlugs?: string[];
   exploreFilters?: Partial<ExploreFilters>;
 } {
   const params = new URLSearchParams(window.location.search);
-  const rawView = params.get("view") as View | null;
-  const view = rawView && VALID_VIEWS.includes(rawView) ? rawView : "home";
+  const rawView = params.get("view") ?? "home";
+  const resolved = (VIEW_ALIASES[rawView] ?? rawView) as View;
+  const view = VALID_VIEWS.includes(resolved) ? resolved : "home";
   const snapshot: ReturnType<typeof stateOfUrl> = { view };
   const slug = params.get("slug");
   if (view === "detail" && slug && /^[a-z0-9-]{1,120}$/i.test(slug)) snapshot.detailSlug = slug;
+  const task = params.get("task");
+  if (view === "task" && task && /^[A-Za-z0-9_-]{1,64}$/.test(task)) snapshot.activeTaskId = task;
   const tab = params.get("tab") as PrepareTab | null;
   if (view === "prepare" && tab && VALID_TABS.includes(tab)) snapshot.prepareTab = tab;
   const ids = params.get("ids");
@@ -101,13 +122,15 @@ function stateOfUrl(): {
 const VIEW_TITLES: Record<View, string> = {
   home: "app.name",
   onboarding: "onboarding.title",
-  journey: "journey.title",
+  workspace: "journey.title",
+  task: "journey.title",
   explore: "explore.title",
   detail: "explore.title", // detail shows the opportunity name in-content
   compare: "compare.title",
   prepare: "prepare.title",
   applications: "apps.title",
   calendar: "cal.title",
+  funding: "funding.title",
   sources: "sources.title",
   admin: "admin.title",
   settings: "settings.title",
@@ -118,6 +141,7 @@ function useUrlRouting() {
   const { t } = useI18n();
   const view = useAppStore((s) => s.view);
   const detailSlug = useAppStore((s) => s.detailSlug);
+  const activeTaskId = useAppStore((s) => s.activeTaskId);
   const prepareTab = useAppStore((s) => s.prepareTab);
   const compareSlugs = useAppStore((s) => s.compareSlugs);
   const exploreFilters = useAppStore((s) => s.exploreFilters);
@@ -129,7 +153,7 @@ function useUrlRouting() {
     applying.current = true;
     useAppStore.getState().applyFromUrl(stateOfUrl());
     applying.current = false;
-     
+
   }, []);
 
   // Store → URL: every navigation pushes a history entry (back/forward work).
@@ -137,18 +161,19 @@ function useUrlRouting() {
   // Typing in the Explore search box changes ONLY the query — pushing a
   // history entry per keystroke made Back replay the search one character
   // at a time, so query-only changes replace the current entry instead.
-  const prevNavRef = useRef({ view, detailSlug, prepareTab, compareSlugs, exploreFilters });
+  const prevNavRef = useRef({ view, detailSlug, activeTaskId, prepareTab, compareSlugs, exploreFilters });
   useEffect(() => {
     const prev = prevNavRef.current;
-    prevNavRef.current = { view, detailSlug, prepareTab, compareSlugs, exploreFilters };
+    prevNavRef.current = { view, detailSlug, activeTaskId, prepareTab, compareSlugs, exploreFilters };
     if (applying.current) return;
-    const next = urlOf({ view, detailSlug, prepareTab, compareSlugs, exploreFilters });
+    const next = urlOf({ view, detailSlug, activeTaskId, prepareTab, compareSlugs, exploreFilters });
     if (next !== window.location.pathname + window.location.search) {
       const navChanged =
         view !== prev.view ||
         detailSlug !== prev.detailSlug ||
+        activeTaskId !== prev.activeTaskId ||
         prepareTab !== prev.prepareTab ||
-        compareSlugs !== prev.compareSlugs ||
+        compareSlugs.join(",") !== prev.compareSlugs.join(",") ||
         exploreFilters.country !== prev.exploreFilters.country ||
         exploreFilters.level !== prev.exploreFilters.level ||
         exploreFilters.cycle !== prev.exploreFilters.cycle;
@@ -160,7 +185,7 @@ function useUrlRouting() {
       }
     }
     firstSync.current = false;
-  }, [view, detailSlug, prepareTab, compareSlugs, exploreFilters]);
+  }, [view, detailSlug, activeTaskId, prepareTab, compareSlugs, exploreFilters]);
 
   // URL ← browser: back/forward buttons re-apply the URL state to the store.
   useEffect(() => {
@@ -277,12 +302,48 @@ function Shell() {
           useAppStore.getState().setStats({ opportunities: null, sources: null, status: "error" });
         }
       })();
+      // Live service capabilities (non-blocking, probed server-side):
+      // the UI states what actually works, in ordinary language.
+      void (async () => {
+        try {
+          const res = await fetch("/api/capabilities");
+          const json = await res.json().catch(() => null);
+          if (res.ok && json?.ok) {
+            useAppStore.getState().setCapabilities(json.data as ServiceCapabilities);
+          }
+        } catch {
+          /* capabilities stay unknown — copy degrades to conservative */
+        }
+      })();
     })();
     return () => {
       cancelled = true;
     };
-     
+
   }, []);
+
+  const isWorkspace = WORKSPACE_VIEWS.includes(view);
+
+  const content = !hydrated ? (
+    <StartupSkeleton />
+  ) : (
+    <>
+      {view === "home" && <HomeView />}
+      {view === "onboarding" && <OnboardingView />}
+      {view === "workspace" && <WorkspaceView />}
+      {view === "task" && <TaskView />}
+      {view === "explore" && <ExploreView />}
+      {view === "detail" && <OpportunityDetailView />}
+      {view === "compare" && <CompareView />}
+      {view === "prepare" && <PrepareView />}
+      {view === "applications" && <ApplicationsView />}
+      {view === "calendar" && <CalendarView />}
+      {view === "funding" && <FundingView />}
+      {view === "sources" && <SourcesView />}
+      {view === "settings" && <SettingsView onSignIn={() => setAuthOpen(true)} />}
+      {view === "admin" && <AdminView />}
+    </>
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -292,28 +353,20 @@ function Shell() {
       >
         Skip to content
       </a>
-      <UraanHeader onSignIn={() => setAuthOpen(true)} />
-      <div id="main-content" className="flex flex-1 flex-col">
-        {!hydrated ? (
-          <StartupSkeleton />
-        ) : (
-          <>
-            {view === "home" && <HomeView />}
-            {view === "onboarding" && <OnboardingView />}
-            {view === "journey" && <JourneyView />}
-            {view === "explore" && <ExploreView />}
-            {view === "detail" && <OpportunityDetailView />}
-            {view === "compare" && <CompareView />}
-            {view === "prepare" && <PrepareView />}
-            {view === "applications" && <ApplicationsView />}
-            {view === "calendar" && <CalendarView />}
-            {view === "sources" && <SourcesView />}
-            {view === "settings" && <SettingsView onSignIn={() => setAuthOpen(true)} />}
-            {view === "admin" && <AdminView />}
-          </>
-        )}
-      </div>
+      {isWorkspace ? (
+        <WorkspaceShell onSignIn={() => setAuthOpen(true)}>{content}</WorkspaceShell>
+      ) : (
+        <>
+          <UraanHeader onSignIn={() => setAuthOpen(true)} />
+          <div id="main-content" className="flex flex-1 flex-col">
+            {content}
+          </div>
+        </>
+      )}
       <UraanFooter />
+      {/* Mobile bottom navigation clearance (workspace shell) — the fixed
+          bar must never cover the footer's last rows. */}
+      {isWorkspace && <div className="h-16 shrink-0 lg:hidden" aria-hidden="true" />}
       <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
     </div>
   );

@@ -9,27 +9,35 @@
  */
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import type { PlanConfirmation } from "@/lib/planning/replan";
 import type {
   ApplicationRecord,
   EvaluationSummary,
+  MentorThreadMessage,
   PlanData,
   ProfileData,
+  ServiceCapabilities,
   SessionUser,
 } from "./types";
 
 export type View =
   | "home"
   | "onboarding"
-  | "journey"
+  | "workspace"
+  | "task"
   | "explore"
   | "detail"
   | "compare"
   | "prepare"
   | "applications"
   | "calendar"
+  | "funding"
   | "sources"
   | "admin"
   | "settings";
+
+/** Legacy deep links (?view=journey) resolve to the workspace shell. */
+export const VIEW_ALIASES: Record<string, View> = { journey: "workspace" };
 
 export type PrepareTab =
   | "language"
@@ -50,6 +58,8 @@ interface AppState {
   // transient navigation
   view: View;
   detailSlug: string | null;
+  /** Guided-task screen target (task id from the active plan). */
+  activeTaskId: string | null;
   prepareTab: PrepareTab;
   compareSlugs: string[];
 
@@ -78,6 +88,25 @@ interface AppState {
    * loading / ok / error so UI copy can degrade honestly. */
   stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" };
 
+  /** Live service capabilities (probed server-side, ordinary-language copy
+   * in the UI). null until /api/capabilities resolves. */
+  capabilities: ServiceCapabilities | null;
+
+  /** Student motion preference (in addition to the OS-level setting). */
+  reduceMotion: boolean;
+
+  /** Contextual mentor rail: hidden by the student (preference, persisted). */
+  mentorHidden: boolean;
+  /** Current mentor thread (in-memory; signed-in users load server history). */
+  mentorThread: MentorThreadMessage[];
+  /** Which surface the mentor is attached to right now. */
+  mentorContext: { view: View; refId?: string } | null;
+
+  /** Open replan confirmation (persisted preview awaiting cancel/confirm).
+   * Shared so the scenario drawer, mentor actions, and the workspace gate
+   * all render the SAME reviewed proposal. */
+  replanConfirmation: PlanConfirmation | null;
+
   // domain state
   profile: ProfileData | null;
   plan: PlanData | null;
@@ -88,18 +117,26 @@ interface AppState {
   exploreFilters: ExploreFilters;
 
   // actions
-  navigate: (view: View, detailSlug?: string) => void;
+  navigate: (view: View, detailSlug?: string, taskId?: string) => void;
   setPrepareTab: (tab: PrepareTab) => void;
   toggleCompare: (slug: string) => void;
   clearCompare: () => void;
   setExploreFilters: (filters: Partial<ExploreFilters>) => void;
   /** Apply a full state snapshot from the URL (deep link / back / forward). */
-  applyFromUrl: (state: { view: View; detailSlug?: string | null; prepareTab?: PrepareTab; compareSlugs?: string[]; exploreFilters?: Partial<ExploreFilters> }) => void;
+  applyFromUrl: (state: { view: View; detailSlug?: string | null; activeTaskId?: string | null; prepareTab?: PrepareTab; compareSlugs?: string[]; exploreFilters?: Partial<ExploreFilters> }) => void;
 
   setUser: (user: SessionUser | null) => void;
   syncOwner: (user: SessionUser | null) => void;
   setHydrated: (hydrated: boolean) => void;
   setStats: (stats: { opportunities: number | null; sources: number | null; status: "loading" | "ok" | "error" }) => void;
+  setCapabilities: (capabilities: ServiceCapabilities | null) => void;
+  setReduceMotion: (reduceMotion: boolean) => void;
+  setMentorHidden: (hidden: boolean) => void;
+  setMentorThread: (messages: MentorThreadMessage[]) => void;
+  appendMentorMessage: (message: MentorThreadMessage) => void;
+  clearMentorThread: () => void;
+  setMentorContext: (context: { view: View; refId?: string } | null) => void;
+  setReplanConfirmation: (confirmation: PlanConfirmation | null) => void;
   ensureImportId: () => string;
   clearImportId: () => void;
   setMergePending: (pending: boolean) => void;
@@ -130,6 +167,7 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       view: "home",
       detailSlug: null,
+      activeTaskId: null,
       prepareTab: "language",
       compareSlugs: [],
 
@@ -143,6 +181,12 @@ export const useAppStore = create<AppState>()(
       mergePending: false,
 
       stats: { opportunities: null, sources: null, status: "loading" },
+      capabilities: null,
+      reduceMotion: false,
+      mentorHidden: false,
+      mentorThread: [],
+      mentorContext: null,
+      replanConfirmation: null,
 
       profile: null,
       plan: null,
@@ -152,8 +196,12 @@ export const useAppStore = create<AppState>()(
       evaluations: {},
       exploreFilters: { query: "", country: "all", level: "all", cycle: "all" },
 
-      navigate: (view, detailSlug) =>
-        set({ view, detailSlug: detailSlug ?? (view === "detail" ? get().detailSlug : null) }),
+      navigate: (view, detailSlug, taskId) =>
+        set({
+          view,
+          detailSlug: detailSlug ?? (view === "detail" ? get().detailSlug : null),
+          activeTaskId: taskId ?? (view === "task" ? get().activeTaskId : null),
+        }),
 
       setPrepareTab: (prepareTab) => set({ prepareTab }),
 
@@ -181,6 +229,7 @@ export const useAppStore = create<AppState>()(
         set({
           view: state.view,
           detailSlug: state.detailSlug ?? null,
+          activeTaskId: state.activeTaskId ?? null,
           prepareTab: state.prepareTab ?? "language",
           compareSlugs: state.compareSlugs ?? [],
           exploreFilters: {
@@ -223,6 +272,23 @@ export const useAppStore = create<AppState>()(
       setHydrated: (hydrated) => set({ hydrated }),
 
       setStats: (stats) => set({ stats }),
+
+      setCapabilities: (capabilities) => set({ capabilities }),
+
+      setReduceMotion: (reduceMotion) => set({ reduceMotion }),
+
+      setMentorHidden: (mentorHidden) => set({ mentorHidden }),
+
+      setMentorThread: (mentorThread) => set({ mentorThread }),
+
+      appendMentorMessage: (message) =>
+        set({ mentorThread: [...get().mentorThread, message] }),
+
+      clearMentorThread: () => set({ mentorThread: [] }),
+
+      setMentorContext: (mentorContext) => set({ mentorContext }),
+
+      setReplanConfirmation: (replanConfirmation) => set({ replanConfirmation }),
 
       ensureImportId: () => {
         const existing = get().importId;
@@ -318,6 +384,8 @@ export const useAppStore = create<AppState>()(
         shortlist: state.shortlist,
         applications: state.applications,
         evaluations: state.evaluations,
+        reduceMotion: state.reduceMotion,
+        mentorHidden: state.mentorHidden,
       }),
     },
   ),

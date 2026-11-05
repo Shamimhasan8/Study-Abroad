@@ -16,15 +16,28 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   ArrowLeft, ExternalLink, Bookmark, Target, Loader2, Sparkles, CircleCheck, CircleX,
   CircleHelp, Building2, CalendarClock, FileWarning, Landmark, ShieldQuestion,
+  BookCheck, ChevronDown, FileText, GraduationCap, Languages, Trophy, Wallet,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { deadlineExpired, deadlineLabel } from "@/lib/dates";
 import { formatBdt, formatForeign } from "@/lib/money";
 import { buildFundingWorksheet, contributionContext, worksheetCurrencies } from "@/lib/funding/engine";
-import type { EvaluationSummary, Opportunity } from "@/lib/types";
+import type { EvaluationSummary, Opportunity, RequirementRule, RuleResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+/** Requirement matrix groups — fixed order, bilingual headers, one icon. */
+const REQUIREMENT_CATEGORIES: { key: RequirementRule["category"]; en: string; bn: string; Icon: LucideIcon }[] = [
+  { key: "admission", en: "Admission", bn: "ভর্তি", Icon: GraduationCap },
+  { key: "language", en: "Language", bn: "ভাষা", Icon: Languages },
+  { key: "funding", en: "Funding", bn: "ফান্ডিং", Icon: Wallet },
+  { key: "documentation", en: "Documentation", bn: "ডকুমেন্টেশন", Icon: FileText },
+  { key: "competitiveness", en: "Competitiveness", bn: "প্রতিযোগিতা", Icon: Trophy },
+];
 
 export function OpportunityDetailView() {
   const { t, lang } = useI18n();
@@ -159,7 +172,82 @@ export function OpportunityDetailView() {
       result === "needs_institution_confirmation" ? "match.needsConfirm" : "match.notApplicable"
     );
 
+  // State chip for the requirement matrix — derived from the stored
+  // evaluation; rules never checked stay visibly "Unchecked".
+  const requirementChip = (result: RuleResult | undefined) => {
+    if (result === "met")
+      return (
+        <Badge variant="outline" className="gap-1 border-leaf/50 text-leaf">
+          <CircleCheck className="h-3 w-3" aria-hidden="true" />
+          {lang === "bn" ? "পূরণ হয়েছে" : "Met"}
+        </Badge>
+      );
+    if (result === "not_met")
+      return (
+        <Badge variant="outline" className="border-coral/60 bg-coral/10 text-coral">
+          {lang === "bn" ? "পূরণ হয়নি" : "Not met"}
+        </Badge>
+      );
+    if (result === "needs_information")
+      return (
+        <Badge variant="outline" className="border-sunflower/70 bg-accent text-accent-foreground">
+          {lang === "bn" ? "আপনার তথ্য দরকার" : "Needs your info"}
+        </Badge>
+      );
+    if (result === "needs_institution_confirmation")
+      return (
+        <Badge variant="outline" className="border-coral/60 text-coral">
+          {lang === "bn" ? "প্রতিষ্ঠানের সাথে নিশ্চিত করুন" : "Confirm with institution"}
+        </Badge>
+      );
+    if (result === "not_applicable")
+      return (
+        <Badge variant="outline" className="border-border text-muted-foreground">
+          {t("match.notApplicable")}
+        </Badge>
+      );
+    return (
+      <Badge variant="outline" className="border-border text-muted-foreground">
+        {lang === "bn" ? "যাচাই হয়নি" : "Unchecked"}
+      </Badge>
+    );
+  };
+
   const datedRounds = opportunity.deadlines.filter((d) => d.closeDate);
+
+  // Requirement matrix: stored evaluation results keyed by rule id.
+  const resultByRule = evaluation
+    ? new Map(evaluation.results.map((r) => [r.ruleId, r]))
+    : undefined;
+
+  // Same usability gate the match card uses — the fit summary's run button
+  // only appears when /api/evaluate would actually accept the request.
+  const hasUsableProfile = Boolean(profile?.onboardingCompleted || (profile && profile.qualifications.length > 0));
+
+  // Review state in ordinary language for the sources drawer.
+  const retrievedLabel = deadlineLabel("date", opportunity.retrievedAt, lang);
+  const reviewKey =
+    opportunity.reviewState === "baseline_review" ? "review.baseline" :
+    opportunity.reviewState === "verified_current" ? "review.verified" :
+    opportunity.reviewState === "pending_recheck" ? "review.pending" : "review.stale";
+  const reviewSentence =
+    opportunity.reviewState === "verified_current"
+      ? lang === "bn" ? `${retrievedLabel} পর্যন্ত বর্তমান হিসেবে যাচাই করা হয়েছে।` : `Verified current as of ${retrievedLabel}.`
+      : opportunity.reviewState === "baseline_review"
+        ? lang === "bn"
+          ? `${retrievedLabel} তারিখে অফিসিয়াল পাতার সাথে মিলিয়ে দেখা হয়েছে; পুনঃযাচাই বাকি।`
+          : `Checked against the official page on ${retrievedLabel}; re-verification pending.`
+        : t(reviewKey);
+  const reviewShortLabel =
+    opportunity.reviewState === "verified_current" ? (lang === "bn" ? "বর্তমান হিসেবে যাচাইকৃত" : "Verified current") :
+    opportunity.reviewState === "baseline_review" ? (lang === "bn" ? "বেসলাইন রিভিউ" : "Baseline review") :
+    opportunity.reviewState === "pending_recheck" ? (lang === "bn" ? "পুনঃযাচাই বাকি" : "Recheck pending") :
+    (lang === "bn" ? "সম্ভবত পুরোনো" : "Possibly outdated");
+  const reviewBadgeClass =
+    opportunity.reviewState === "verified_current" ? "border-leaf/50 bg-secondary/70 text-secondary-foreground" :
+    opportunity.reviewState === "pending_recheck" ? "border-sunflower/60 bg-accent text-accent-foreground" :
+    opportunity.reviewState === "stale" ? "border-coral/60 text-coral" :
+    "text-muted-foreground";
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
@@ -263,7 +351,7 @@ export function OpportunityDetailView() {
                 </div>
               )}
             </>
-          ) : profile?.onboardingCompleted || (profile && profile.qualifications.length > 0) ? (
+          ) : hasUsableProfile ? (
             <div className="flex flex-col items-start gap-3">
               <p className="text-sm text-muted-foreground">{t("detail.needsProfile")}</p>
               <Button onClick={runMatch} disabled={matching} className="gap-1.5">
@@ -278,6 +366,47 @@ export function OpportunityDetailView() {
             <div className="flex flex-col items-start gap-3">
               <p className="text-sm text-muted-foreground">{t("detail.needsProfile")}</p>
               <Button variant="outline" onClick={() => navigate("onboarding")}>{t("home.ctaPrimary")}</Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Fit summary — deterministic counts in ordinary language. No AI:
+          the same stored evaluation the match card runs, restated plainly. */}
+      <Card className="mb-6 bg-card">
+        <CardContent className="p-5">
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold tracking-tight">
+            <Sparkles className="h-4 w-4 text-leaf" aria-hidden="true" />
+            {lang === "bn" ? "ফিট সারসংক্ষেপ" : "Fit summary"}
+          </h2>
+          {evaluation ? (
+            <p className="text-sm leading-relaxed text-foreground/85">
+              {lang === "bn"
+                ? `নথিভুক্ত ${evaluation.results.length}টি শর্তের মধ্যে: ${evaluation.counts.met}টি পূরণ হয়েছে, ${evaluation.counts.notMet}টি এখনো পূরণ হয়নি, ${evaluation.counts.needsInfo}টির জন্য আপনার তথ্য দরকার, ${evaluation.counts.needsConfirm}টির জন্য প্রতিষ্ঠানের নিশ্চিতকরণ দরকার।`
+                : `Of ${evaluation.results.length} documented requirements: ${evaluation.counts.met} met, ${evaluation.counts.notMet} not met yet, ${evaluation.counts.needsInfo} need your information, ${evaluation.counts.needsConfirm} need institution confirmation.`}
+              {evaluation.conservativeNote ? ` ${t("match.conservative")}` : ""}
+              {lang === "bn"
+                ? " অনিশ্চিত শর্ত অনিশ্চিতই থাকে — Uraan কখনো নিজে থেকে সেগুলো পাস করিয়ে দেয় না।"
+                : " Unconfirmed items stay unconfirmed — Uraan never auto-passes them."}
+            </p>
+          ) : (
+            <div className="flex flex-col items-start gap-3">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {lang === "bn"
+                  ? "শর্ত যাচাই এখনো চালানো হয়নি — নিশ্চিত ফিট সারসংক্ষেপ দেখতে যাচাইটি চালান।"
+                  : "The requirement check has not run yet — run it to see a deterministic fit summary."}
+              </p>
+              {hasUsableProfile ? (
+                <Button variant="ghost" size="sm" onClick={runMatch} disabled={matching} className="gap-1.5">
+                  {matching && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  {matching ? t("detail.matchRun") : lang === "bn" ? "শর্ত যাচাই চালান" : "Run requirement check"}
+                </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground">{t("detail.needsProfile")}</p>
+              )}
+              {matchError && (
+                <p className="text-xs text-destructive">{t("common.error")} — {t("common.retry")}</p>
+              )}
             </div>
           )}
         </CardContent>
@@ -359,19 +488,62 @@ export function OpportunityDetailView() {
         <AccordionItem value="requirements">
           <AccordionTrigger className="text-base font-semibold">{t("detail.requirements")}</AccordionTrigger>
           <AccordionContent>
-            <ul className="flex flex-col gap-2 text-sm">
-              {opportunity.requirements.map((r) => (
-                <li key={r.id} className="rounded-lg border border-border/70 p-3">
-                  <p className="font-medium">{lang === "bn" && r.titleBn ? r.titleBn : r.title}</p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                    {lang === "bn" && r.detailBn ? r.detailBn : r.detail}
-                  </p>
-                  {r.requiredness === "conditional" && r.conditionNote && (
-                    <p className="mt-1 text-xs italic text-coral">{r.conditionNote}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {/* Requirement matrix — rules grouped by category; each row's state
+                chip comes from the stored evaluation (if any). Expand a rule
+                for its detail and suggested action. */}
+            <div className="flex flex-col gap-4">
+              {REQUIREMENT_CATEGORIES.map(({ key, en, bn, Icon }) => {
+                const rules = opportunity.requirements.filter((r) => r.category === key);
+                if (rules.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <Icon className="h-3.5 w-3.5 text-leaf" aria-hidden="true" />
+                      {lang === "bn" ? bn : en}
+                    </p>
+                    <div role="list" className="flex flex-col gap-2">
+                      {rules.map((r) => {
+                        const result = resultByRule?.get(r.id);
+                        return (
+                          <Collapsible key={r.id} role="listitem" className="rounded-lg border border-border/70">
+                            <div className="flex items-start gap-2 p-3">
+                              <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-2 text-left text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 [&[data-state=open]_.rule-chevron]:rotate-180">
+                                <ChevronDown className="rule-chevron mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" aria-hidden="true" />
+                                <span className="min-w-0 leading-snug">{lang === "bn" && r.titleBn ? r.titleBn : r.title}</span>
+                              </CollapsibleTrigger>
+                              <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                                {requirementChip(result?.result)}
+                                {r.requiredness === "optional" && (
+                                  <Badge variant="outline" className="text-muted-foreground">{t("common.optional")}</Badge>
+                                )}
+                                {r.requiredness === "conditional" && (
+                                  <Badge variant="outline" className="text-muted-foreground" title={r.conditionNote}>
+                                    {lang === "bn" ? "শর্তসাপেক্ষ" : "Conditional"}
+                                  </Badge>
+                                )}
+                              </span>
+                            </div>
+                            <CollapsibleContent>
+                              <div className="px-3 pb-3 pl-9 text-xs leading-relaxed text-muted-foreground">
+                                <p>{lang === "bn" && r.detailBn ? r.detailBn : r.detail}</p>
+                                {r.requiredness === "conditional" && r.conditionNote && (
+                                  <p className="mt-1 italic text-coral">{r.conditionNote}</p>
+                                )}
+                                {result?.suggestedAction && (
+                                  <p className="mt-1 italic text-leaf">
+                                    {t("match.action")}: {lang === "bn" && result.suggestedActionBn ? result.suggestedActionBn : result.suggestedAction}
+                                  </p>
+                                )}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </AccordionContent>
         </AccordionItem>
 
@@ -494,31 +666,62 @@ export function OpportunityDetailView() {
             </ul>
           </AccordionContent>
         </AccordionItem>
-
-        <AccordionItem value="sources">
-          <AccordionTrigger className="text-base font-semibold">{t("detail.sources")}</AccordionTrigger>
-          <AccordionContent>
-            <ul className="flex flex-col gap-2.5 text-sm">
-              {opportunity.sources.map((s) => (
-                <li key={s.key}>
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium underline decoration-leaf/40 underline-offset-4 hover:decoration-leaf"
-                  >
-                    {s.title} <ExternalLink className="inline h-3 w-3" aria-hidden="true" />
-                  </a>
-                  <p className="text-xs text-muted-foreground">{s.publisher} · {t("detail.retrieved")}: {s.retrievedAt}</p>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {t("detail.reviewState")}: {t(opportunity.reviewState === "baseline_review" ? "review.baseline" : opportunity.reviewState === "verified_current" ? "review.verified" : opportunity.reviewState === "pending_recheck" ? "review.pending" : "review.stale")} · {t("detail.officialNote")}
-            </p>
-          </AccordionContent>
-        </AccordionItem>
       </Accordion>
+
+      {/* Sources & verification drawer — the evidence trail moved out of the
+          accordion onto its own surface; the review-state badge sits beside
+          the trigger so freshness is visible before opening. */}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <BookCheck className="h-4 w-4" aria-hidden="true" />
+              {lang === "bn" ? `সোর্স ও যাচাই (${opportunity.sources.length})` : `Sources & verification (${opportunity.sources.length})`}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-full gap-0 overflow-y-auto sm:max-w-md">
+            <SheetHeader className="border-b border-border/70">
+              <SheetTitle className="pr-6">
+                {lang === "bn" ? "সোর্স ও যাচাই" : "Sources & verification"}
+              </SheetTitle>
+              <SheetDescription>
+                {lang === "bn"
+                  ? "এই রেকর্ডের প্রতিটি তথ্য এই অফিসিয়াল পাতা থেকে নেওয়া।"
+                  : "Every fact in this record traces back to these official pages."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col gap-4 p-4">
+              {/* Review state in ordinary language, with the retrieval date. */}
+              <p className="rounded-lg bg-accent/60 p-3 text-xs leading-relaxed text-foreground/80">
+                {reviewSentence}
+              </p>
+              <ul className="flex flex-col gap-2.5 text-sm">
+                {opportunity.sources.map((s) => (
+                  <li key={s.key} className="rounded-lg border border-border/70 p-3">
+                    <a
+                      href={s.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start gap-1.5 font-medium underline decoration-leaf/40 underline-offset-4 hover:decoration-leaf"
+                    >
+                      {s.title}
+                      <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    </a>
+                    <p className="mt-1 text-xs text-muted-foreground">{s.publisher}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("detail.retrieved")}: {deadlineLabel("date", s.retrievedAt, lang)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">{t("detail.officialNote")}</p>
+            </div>
+          </SheetContent>
+        </Sheet>
+        <Badge variant="outline" className={reviewBadgeClass} title={t(reviewKey)}>
+          {reviewShortLabel}
+        </Badge>
+      </div>
     </main>
   );
 }
