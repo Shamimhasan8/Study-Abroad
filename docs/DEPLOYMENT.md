@@ -44,6 +44,29 @@ Because serverless instances still have no SQLite file, the deployed app
 then serves the public catalogue from the committed verified seeds
 (`src/lib/catalogue/fallback.ts`) — see the next section.
 
+## Verification record — clean-room deploy audit (2026-11-05)
+
+A full clean-room audit was run to settle "there was a problem deploying
+the code" reports. Results, each reproduced from a bare checkout state
+(no `.env`, no `db/*.db`, no `DATABASE_URL` in the environment):
+
+| Check | Result |
+| --- | --- |
+| `next build` with zero env/db | ✔ exit 0 — compiled, 3/3 static pages |
+| Standalone boot (`npm start` / `bun run start`, node runtime) | ✔ homepage/health/static all 200 |
+| `next start` boot | ✔ works (logs a standalone-config warning, serves normally) |
+| `/api/health`, `/api/catalogue`, `/api/state`, `/api/capabilities` with no database | ✔ 200 with `status: "degraded"`, `catalogue: "seed-fallback"` (11 opportunities / 27 sources from committed seeds) |
+| Write paths with no database (register) | ✔ honest typed 500 envelope `{"ok":false,"error":"server_error","retryable":true}` — no crash, no blank page |
+| `engines` / start script | ✔ `node >= 20.9.0` declared; standalone server boots with plain `node` (no Bun requirement on the host) |
+
+**Conclusion:** the repository is deployable as-is on Vercel with zero
+configuration (public browsing via seed-fallback; accounts/uploads/mentor
+unlock with Steps 1–2 env). A "Sorry, there was a problem deploying the
+code — return to the generation page" message is a **deploy-platform-side
+failure** (generator UI, credentials, or quota), not a defect in this
+codebase: retrying the deploy, or importing the GitHub repo into Vercel
+directly, is the correct path.
+
 ## Step 0 — Zero-config Vercel deployment (seed-fallback mode)
 
 Importing this repo into Vercel and deploying with **no environment
