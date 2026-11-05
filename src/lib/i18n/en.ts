@@ -193,6 +193,24 @@ export const en = {
   "home.mentorCta": "Meet the mentor in your workspace",
   "home.mentorActions": "Explain a requirement · help me start a task · review my next week · preview a change",
 
+  // Home — FAQ + final CTA
+  "home.faqTitle": "Questions students actually ask",
+  "home.faqQ1": "Is Uraan free to use?",
+  "home.faqA1": "Yes — browsing, planning, and the preparation tools are free during this competition release. No payments, no premium tier.",
+  "home.faqQ2": "Does Uraan cover every country?",
+  "home.faqA2": "No, and we won't pretend to. The verified catalogue currently covers the United States, Germany, and Japan across bachelor's, master's, and PhD routes — anything outside that stays visibly unsupported instead of guessed.",
+  "home.faqQ3": "Can Uraan guarantee admission or a scholarship?",
+  "home.faqA3": "No product honestly can. Uraan shows documented requirements, explains your gaps, and plans real tasks — the decisions belong to institutions.",
+  "home.faqQ4": "What happens to my work if I don't create an account?",
+  "home.faqA4": "Your profile, plan, notes, and shortlist save on this device as a guest. Creating an account is what keeps them across devices.",
+  "home.faqQ5": "Where do the facts come from?",
+  "home.faqA5": "Every decision-relevant fact carries a source, retrieval date, and review status from official programme, admissions, aid, or administrator pages. See Sources & Coverage for the full registry.",
+  "home.finalTitle": "Start with one useful step",
+  "home.finalBody": "Tell Uraan where you're starting from — it turns documented requirements into a plan you can actually follow this week.",
+  "home.finalCta": "Build my study plan",
+  "home.finalCtaResume": "Continue my plan",
+  "home.finalSecondary": "Explore opportunities",
+
   // Home — first-visit tour
   "home.tourWelcomeTitle": "Uraan in about 30 seconds",
   "home.tourWelcomeBody": "A quick tour of the four things that matter — skip any time, it won't come back uninvited.",

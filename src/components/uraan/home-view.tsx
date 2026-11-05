@@ -22,6 +22,7 @@ import { HomeDemo } from "./home-demo";
 import { HomeOpportunities } from "./home-opportunities";
 import { HomeFunding } from "./home-funding";
 import { HomeMentor } from "./home-mentor";
+import { HomeFaqCta } from "./home-faq-cta";
 import { FirstVisitTour } from "./first-visit-tour";
 import {
   StudentReading,
@@ -301,6 +302,9 @@ export function HomeView() {
 
       {/* ===================== Mentor preview ===================== */}
       <HomeMentor />
+
+      {/* ===================== FAQ + final CTA ===================== */}
+      <HomeFaqCta />
 
       {/* ===================== How it works ===================== */}
       <motion.section
