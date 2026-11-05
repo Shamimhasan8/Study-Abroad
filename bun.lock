@@ -42,6 +42,7 @@
         "@tailwindcss/postcss": "^4",
         "@tanstack/react-query": "^5.82.0",
         "@tanstack/react-table": "^8.21.3",
+        "@types/node": "^25",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "class-variance-authority": "^0.7.1",

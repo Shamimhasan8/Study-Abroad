@@ -12,19 +12,7 @@ const nextConfig: NextConfig = {
   // the @img platform variants without README files and the standalone
   // copy step crashed with ENOENT on exactly those files.
   outputFileTracingExcludes: {
-    "*": [
-      "node_modules/sharp/**",
-      "node_modules/@img/**",
-      // Next bundles its own copy of @swc/helpers (handle-externals:
-      // "should not be external as it would require hoisting"), and the
-      // build even deletes the node_modules copy mid-build — yet the
-      // Turbopack trace manifest still lists node_modules/@swc/helpers
-      // paths, so the standalone copier crashed with ENOENT under
-      // production-only installs. Excluded: the inlined copy suffices
-      // (verified by booting the standalone server and serving 200s
-      // with the package absent).
-      "node_modules/@swc/helpers/**",
-    ],
+    "*": ["node_modules/sharp/**", "node_modules/@img/**"],
   },
   async headers() {
     return [
