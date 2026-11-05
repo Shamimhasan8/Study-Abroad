@@ -122,8 +122,8 @@ function stateOfUrl(): {
 const VIEW_TITLES: Record<View, string> = {
   home: "app.name",
   onboarding: "onboarding.title",
-  workspace: "journey.title",
-  task: "journey.title",
+  workspace: "workspace.title",
+  task: "workspace.title",
   explore: "explore.title",
   detail: "explore.title", // detail shows the opportunity name in-content
   compare: "compare.title",

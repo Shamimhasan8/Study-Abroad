@@ -574,7 +574,7 @@ export function FundingView() {
           )}
 
           <div className="mt-4 rounded-lg bg-accent p-3">
-            {worksheet.upfrontNeededBdt !== undefined ? (
+            {worksheet.upfrontNeededBdt !== undefined && upfrontLines.length > 0 ? (
               <p className="flex flex-wrap items-baseline gap-2 text-sm">
                 <span className="font-semibold">{t("funding.upfront")}:</span>
                 <span className="text-base font-bold tabular-nums text-coral">
@@ -582,6 +582,21 @@ export function FundingView() {
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {lang === "bn" ? "ভর্তির আগেই হাতে থাকতে হবে" : "must be in hand before enrolment"}
+                </span>
+              </p>
+            ) : upfrontLines.length === 0 ? (
+              /* Zero DOCUMENTED upfront lines is not the same as "you need
+                 zero money" — visa/residence/permit costs are simply not
+                 documented for this record. Never let absence read as free. */
+              <p className="text-sm">
+                <span className="font-semibold">{t("funding.upfront")}:</span>{" "}
+                <span className="font-medium text-sunflower">
+                  {lang === "bn" ? "নথিভুক্ত কোনো ভর্তির-আগে খরচ নেই" : "No before-enrolment costs documented"}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {lang === "bn"
+                    ? "এর মানে এই নয় যে কিছুই লাগবে না — ভিসা/রেসিডেন্স পারমিটের খরচ এই রেকর্ডে নথিভুক্ত নয়; অফিসিয়াল সূত্রে যাচাই করুন।"
+                    : "That is NOT the same as free — visa/residence-permit costs are simply undocumented for this record; verify them on the official source."}
                 </span>
               </p>
             ) : worksheet.knownCostSubtotalBdt !== undefined ? (

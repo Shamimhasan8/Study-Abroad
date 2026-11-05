@@ -7,6 +7,7 @@ export const en = {
   "nav.explore": "Explore",
   "nav.journey": "My Journey",
   "nav.workspace": "Workspace",
+  "workspace.title": "My workspace",
   "nav.funding": "Funding",
   "nav.prepare": "Prepare",
   "nav.applications": "Applications",

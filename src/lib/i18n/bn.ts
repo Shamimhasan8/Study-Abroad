@@ -8,6 +8,7 @@ export const bn: Record<TranslationKey, string> = {
   "nav.explore": "এক্সপ্লোর",
   "nav.journey": "আমার যাত্রা",
   "nav.workspace": "ওয়ার্কস্পেস",
+  "workspace.title": "আমার ওয়ার্কস্পেস",
   "nav.funding": "ফান্ডিং",
   "nav.prepare": "প্রস্তুতি",
   "nav.applications": "আবেদনসমূহ",

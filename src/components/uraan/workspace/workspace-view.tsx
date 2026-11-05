@@ -182,7 +182,7 @@ export function WorkspaceView() {
     return (
       <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12 text-center sm:px-6">
         <MilestonePath width={260} height={110} className="mx-auto" aria-hidden="true" />
-        <h1 className="mt-6 font-display text-[26px] font-bold tracking-tight sm:text-3xl">{t("journey.title")}</h1>
+        <h1 className="mt-6 font-display text-[26px] font-bold tracking-tight sm:text-3xl">{t("workspace.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t("journey.noGoalBody")}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Button onClick={() => navigate("onboarding")}>{t("home.ctaPrimary")}</Button>
@@ -205,7 +205,7 @@ export function WorkspaceView() {
           </p>
           <h1 className="mt-1 flex items-center gap-2 font-display text-[26px] font-bold tracking-tight sm:text-3xl">
             <Map className="h-6 w-6 text-leaf" aria-hidden="true" />
-            {t("journey.title")}
+            {t("workspace.title")}
             {fly && <PaperPlaneFlight width={34} height={34} />}
           </h1>
         </div>

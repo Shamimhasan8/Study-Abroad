@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/identity/auth";
 import { getOpportunity } from "@/lib/catalogue/queries";
 import { evaluateOpportunity } from "@/lib/matching/engine";
 import { complete, extractJson } from "@/lib/ai/provider";
-import { badRequest, unauthorized, serverError } from "@/lib/validation";
+import { badRequest, unauthorized, serverError, profileSchema } from "@/lib/validation";
 import type {
   EvaluationSummary,
   MentorAction,
@@ -26,6 +26,18 @@ const mentorRequestSchema = z.object({
     refId: z.string().trim().min(1).max(120).optional(),
   }),
   lang: z.enum(["en", "bn"]).default("en"),
+  /** Guest context (mirrors plan/generate + evaluate): the local profile
+   * and plan facts the student already has. Validated; never trusted for
+   * authorization — grounding only. Ignored for signed-in users. */
+  profile: profileSchema.optional(),
+  planContext: z
+    .object({
+      done: z.number().int().min(0).max(500),
+      open: z.number().int().min(0).max(500),
+      nextTaskTitle: z.string().trim().min(1).max(240).optional(),
+      nextTaskStableKey: z.string().trim().min(1).max(120).optional(),
+    })
+    .optional(),
 });
 
 /** Strict model-output contract — anything outside it fails the parse. */
@@ -146,36 +158,55 @@ interface GroundedContext {
 async function buildGroundedContext(
   userId: string | undefined,
   context: { view: string; refId?: string },
+  guestProfile?: ProfileData,
+  guestPlan?: { done: number; open: number; nextTaskTitle?: string; nextTaskStableKey?: string },
 ): Promise<GroundedContext> {
-  // The detail view's refId IS the opportunity slug; otherwise the
-  // signed-in student's active goal is the target. Guests have no goal.
-  let targetSlug: string | null =
-    context.view === "detail" && context.refId ? context.refId : null;
+  // refId is used as the target ONLY when it resolves to a real catalogue
+  // slug (validation by resolution — an arbitrary string simply misses);
+  // signed-in students otherwise ground on their active server-side goal.
+  let targetSlug: string | null = context.refId ?? null;
+  let opportunity = targetSlug ? await getOpportunity(targetSlug) : null;
+  if (!opportunity) targetSlug = null;
 
   const goal = userId ? await loadActiveGoal(userId) : null;
-  if (!targetSlug && goal) targetSlug = goal.opportunitySlug;
+  if (!targetSlug && goal) {
+    targetSlug = goal.opportunitySlug;
+    opportunity = await getOpportunity(targetSlug);
+  }
 
-  const opportunity = targetSlug ? await getOpportunity(targetSlug) : null;
-
-  const profile = userId ? ((await loadProfile(userId)) ?? GENERIC_PROFILE) : GENERIC_PROFILE;
+  const profile = userId
+    ? ((await loadProfile(userId)) ?? GENERIC_PROFILE)
+    : (guestProfile ?? GENERIC_PROFILE);
   const evaluation = opportunity
     ? evaluateOpportunity(opportunity.requirements, profile, opportunity.slug)
     : null;
 
-  const tasks = goal?.plans[0]?.tasks ?? [];
-  const openTasks = tasks
-    .filter((t) => t.status === "todo" || t.status === "in_progress")
-    .sort((a, b) => a.order - b.order);
-  const nextTask = openTasks[0] ?? null;
-
+  // Plan facts: server truth for signed-in students; the validated guest
+  // snapshot for guests (their local plan IS their durable store).
+  if (userId) {
+    const tasks = goal?.plans[0]?.tasks ?? [];
+    const openTasks = tasks
+      .filter((t) => t.status === "todo" || t.status === "in_progress")
+      .sort((a, b) => a.order - b.order);
+    return {
+      opportunity,
+      evaluation,
+      hasPlan: Boolean(goal?.plans[0]),
+      planDone: tasks.filter((t) => t.status === "done").length,
+      planOpen: openTasks.length,
+      nextTaskTitle: openTasks[0]?.title ?? null,
+      nextTaskStableKey: openTasks[0]?.stableKey ?? null,
+    };
+  }
+  const open = guestPlan?.open ?? 0;
   return {
     opportunity,
     evaluation,
-    hasPlan: Boolean(goal?.plans[0]),
-    planDone: tasks.filter((t) => t.status === "done").length,
-    planOpen: openTasks.length,
-    nextTaskTitle: nextTask?.title ?? null,
-    nextTaskStableKey: nextTask?.stableKey ?? null,
+    hasPlan: open + (guestPlan?.done ?? 0) > 0,
+    planDone: guestPlan?.done ?? 0,
+    planOpen: open,
+    nextTaskTitle: guestPlan?.nextTaskTitle ?? null,
+    nextTaskStableKey: guestPlan?.nextTaskStableKey ?? null,
   };
 }
 
@@ -215,8 +246,14 @@ function buildFactLines(
     } else {
       facts.push("Signed-in student with no active plan yet.");
     }
+  } else if (ctx.hasPlan) {
+    facts.push(
+      `Guest plan (this device): ${ctx.planDone} tasks done, ${ctx.planOpen} open${
+        ctx.nextTaskTitle ? `, next open task: "${ctx.nextTaskTitle}"` : ""
+      }.`,
+    );
   } else {
-    facts.push("Guest session: no saved profile or plan facts (a generic undecided profile was used for the check).");
+    facts.push("Guest session with no saved plan yet.");
   }
   facts.push(`Current app surface: ${context.view}${context.refId ? `, ref: ${context.refId}` : ""}.`);
   return facts;
@@ -338,7 +375,12 @@ export async function POST(request: Request) {
     const { message, context, lang } = parsed.data;
 
     const user = await getCurrentUser(); // guests allowed
-    const ctx = await buildGroundedContext(user?.id, context);
+    const ctx = await buildGroundedContext(
+      user?.id,
+      context,
+      user ? undefined : parsed.data.profile,
+      user ? undefined : parsed.data.planContext,
+    );
     const facts = buildFactLines(ctx, Boolean(user), context);
 
     const result = await complete({

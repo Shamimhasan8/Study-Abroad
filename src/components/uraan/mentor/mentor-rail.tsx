@@ -100,6 +100,7 @@ export function MentorRail() {
   const mentorThread = useAppStore((s) => s.mentorThread);
   const goalSlug = useAppStore((s) => s.goalSlug);
   const plan = useAppStore((s) => s.plan);
+  const profile = useAppStore((s) => s.profile);
   const evaluations = useAppStore((s) => s.evaluations);
   const reduceMotion = useAppStore((s) => s.reduceMotion);
   const appendMentorMessage = useAppStore((s) => s.appendMentorMessage);
@@ -216,7 +217,11 @@ export function MentorRail() {
     setInput("");
     setAwaiting(true);
     const refId =
-      view === "detail" ? detailSlug ?? undefined : view === "task" ? activeTaskId ?? undefined : undefined;
+      view === "detail"
+        ? detailSlug ?? undefined
+        : view === "task"
+          ? activeTaskId ?? undefined
+          : goalSlug ?? undefined;
 
     // Optimistic user turn — the mentor reply is appended only when the
     // server actually answers.
@@ -227,9 +232,29 @@ export function MentorRail() {
       createdAt: new Date().toISOString(),
     });
 
+    // Guests ground the mentor on the SAME local facts the deterministic
+    // surfaces use (validated server-side; never an authorization source).
+    const openTasks = (plan?.tasks ?? []).filter(
+      (task) => task.status === "todo" || task.status === "in_progress",
+    );
+    const nextOpen = [...openTasks].sort((a, b) =>
+      (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"),
+    )[0];
+    const body: Record<string, unknown> = { message, context: { view, refId }, lang };
+    if (!user) {
+      if (profile) body.profile = profile;
+      if (plan) {
+        body.planContext = {
+          done: plan.tasks.filter((task) => task.status === "done").length,
+          open: openTasks.length,
+          ...(nextOpen ? { nextTaskTitle: nextOpen.title, nextTaskStableKey: nextOpen.stableKey } : {}),
+        };
+      }
+    }
+
     const result = await apiPost<unknown>(
       "/api/ai/mentor",
-      { message, context: { view, refId }, lang },
+      body,
       { timeoutMs: 60000 }, // the provider timeout is 45s — don't abort early
     );
 
