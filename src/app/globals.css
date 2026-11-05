@@ -188,6 +188,14 @@
   outline-offset: 2px;
 }
 
+/* First-visit tour anchor highlight — a temporary warm ring that never
+   traps focus; removed as soon as the step changes. */
+.uraan-tour-ring {
+  outline: 3px solid var(--coral);
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+
 /* Long-list scroll areas */
 .uraan-scroll {
   scrollbar-width: thin;

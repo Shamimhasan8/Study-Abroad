@@ -193,6 +193,24 @@ export const en = {
   "home.mentorCta": "Meet the mentor in your workspace",
   "home.mentorActions": "Explain a requirement · help me start a task · review my next week · preview a change",
 
+  // Home — first-visit tour
+  "home.tourWelcomeTitle": "Uraan in about 30 seconds",
+  "home.tourWelcomeBody": "A quick tour of the four things that matter — skip any time, it won't come back uninvited.",
+  "home.tourStep1Title": "Pick your degree route",
+  "home.tourStep1Body": "Bachelor's, Master's, or PhD — the example plan and your starting questions adapt to it.",
+  "home.tourStep2Title": "Search what's really covered",
+  "home.tourStep2Body": "Subject or destination — results come from the verified catalogue, not the whole internet.",
+  "home.tourStep3Title": "Start your own plan",
+  "home.tourStep3Body": "A short set of questions, unknowns allowed. Your work saves as you go.",
+  "home.tourStep4Title": "See the loop in action",
+  "home.tourStep4Body": "Requirement → explained gap → dated task → saved evidence. That's the whole product.",
+  "home.tourSkip": "Skip tour",
+  "home.tourBack": "Back",
+  "home.tourNext": "Next",
+  "home.tourFinish": "Finish",
+  "home.tourRestart": "Take the tour again",
+  "home.tourStepOf": "Step {current} of {total}",
+
   // Onboarding
   "onboarding.title": "Let's build your plan",
   "onboarding.subtitle": "A few questions at a time. Nothing is required unless it changes your plan.",

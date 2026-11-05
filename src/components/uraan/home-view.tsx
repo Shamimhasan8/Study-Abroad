@@ -22,6 +22,7 @@ import { HomeDemo } from "./home-demo";
 import { HomeOpportunities } from "./home-opportunities";
 import { HomeFunding } from "./home-funding";
 import { HomeMentor } from "./home-mentor";
+import { FirstVisitTour } from "./first-visit-tour";
 import {
   StudentReading,
   BookStack,
@@ -140,7 +141,7 @@ export function HomeView() {
           </p>
 
           <div className="mt-7 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
-            <Button size="lg" onClick={startPlan} className="gap-2">
+            <Button size="lg" id="hero-primary-cta" onClick={startPlan} className="gap-2">
               <Compass className="h-4 w-4" aria-hidden="true" />
               {hasProgress ? t("home.ctaResume") : t("home.ctaPrimary")}
             </Button>
@@ -337,6 +338,9 @@ export function HomeView() {
       <section className="mt-12 flex justify-center" aria-hidden="true">
         <MilestonePath width={280} height={118} />
       </section>
+
+      {/* Optional first-visit tour — never restarts uninvited */}
+      <FirstVisitTour />
     </main>
   );
 }
