@@ -51,7 +51,7 @@ const PRIMARY: { view: View; icon: typeof Compass }[] = [
 
 export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
   const { t, lang, setLang } = useI18n();
-  const { view, navigate, user, setUser, resetDomain } = useAppStore();
+  const { view, navigate, user, setUser, syncOwner } = useAppStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const go = (next: View) => {
@@ -103,8 +103,13 @@ export function UraanHeader({ onSignIn }: { onSignIn: () => void }) {
     } catch {
       /* network failure — clear local identity anyway */
     }
+    // Reset the cache owner FIRST: this discards the signed-out account's
+    // cached domain state (syncOwner's account→guest branch) and returns the
+    // cache to guest scope. Without it, ownerKey keeps the old account id and
+    // any guest work done while signed out would be silently wiped when a
+    // DIFFERENT account signs in next (account→account discard branch).
+    useAppStore.getState().syncOwner(null);
     setUser(null);
-    resetDomain();
     navigate("home");
   };
 
