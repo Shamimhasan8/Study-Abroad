@@ -1,7 +1,7 @@
 # PREMIUM_03_AUDIT.md — baseline audit for the Premium Animated Mentor brief
 
 **Repository:** https://github.com/Shamimhasan8/Study-Abroad
-**Audit revision:** `9f45bd6` (all fixes in this document are committed by this revision)
+**Audit revision:** `9f45bd6` (main defect-fix range) — extended to `78a838f` by the post-audit browser-discovered fix (defect #15 below). All fixes in this document are committed and pushed.
 **Audit date:** 5 November 2026, Asia/Dhaka
 **Auditor environment:** local dev sandbox (`bun run dev`, port 3000, SQLite at `db/custom.db`, seeded: 11 opportunities / 27 sources / 3 guides). Production deployment (`study-abroad-one-zeta.vercel.app`) was NOT reachable for inspection from this environment — every production claim below is marked accordingly.
 
@@ -40,6 +40,11 @@ Severity order: data loss → functional → display/consistency. Every fix is o
 | 12 | `calendar-view.tsx` vs `api/calendar/ics` submitted-date basis | **Consistency** — same milestone on different days in-app vs exported (`updatedAt` vs `createdAt`) | no shared basis | `5be48a5` | Both use newest `submitted` event, `updatedAt` fallback; ICS mirrors the in-app filter |
 | 13 | `planning/engine.ts:78` spring intake month = May | **Consistency** — assumed planning window disagreed with the published "Spring (April)" label by a month | month index 4 vs 3 | `5be48a5` | Aligned to April |
 | 14 | `api/admin/ingestion` POST-only while Vercel Cron sends GET | **Operational** — the documented cron schedule would 405 on every run; ingestion never fires | route exported only POST | `a3f7246` | **[L]** GET/POST without credential and GET with wrong secret all return 401 locally |
+| 15 | `store.ts` `applyFromUrl` merged URL snapshots over current state | **Functional** — found during browser verification AFTER the main audit: Back/Forward could change views but never *remove* a filter/tab/compare selection; the store→URL sync re-pushed the merged state and cancelled the navigation | merge instead of replace semantics | `78a838f` | **[L]** Browser E2E: filter to Master's (6 cards) → Back restores 11 cards → Forward re-applies 6 cards |
+
+## 2a. Fix commit index (audit → repair range)
+
+`69d4419` → `78a838f`: 15 defect-fix commits + audit doc + sticker slot + lint chore, all pushed to `origin/main`. Verification at each step: `bun run typecheck` (0 errors), `bun run lint` (0 errors/warnings), `bun run test` (37/37).
 
 ## 3. Checked and clean (no action needed)
 
