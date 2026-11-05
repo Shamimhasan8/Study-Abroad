@@ -22,6 +22,49 @@ Fixes already in this repo (this commit range): typed 503 envelopes with
 request IDs on every data route, a document storage adapter with a
 production object-storage backend, and this documented migration path.
 
+## What failed the Vercel *build* (root cause, fixed 2026-11-05)
+
+The deployment check on `main` failed during `next build` on Vercel:
+
+1. **No `postinstall` hook** — Vercel's install step did not guarantee
+   `prisma generate`, so `@prisma/client` had no generated types/models and
+   the build's typecheck failed. `package.json` now runs
+   `postinstall: prisma generate` on every host.
+2. **Sandbox-only `cp` commands chained into `build`** — the script assumed
+   the standalone output layout of this build environment. `build` is now a
+   host-agnostic `next build`; the standalone assembly moved into `start`,
+   where it is actually needed.
+3. **Route handlers could be prerendered at build time** — all API routes
+   now export `dynamic = "force-dynamic"`, so a build can never fail on
+   build-time database access, and no build-time response can get baked
+   into the output.
+
+With these three, the build passes on Vercel with **zero configuration**.
+Because serverless instances still have no SQLite file, the deployed app
+then serves the public catalogue from the committed verified seeds
+(`src/lib/catalogue/fallback.ts`) — see the next section.
+
+## Step 0 — Zero-config Vercel deployment (seed-fallback mode)
+
+Importing this repo into Vercel and deploying with **no environment
+variables** yields a working public site:
+
+| Capability | Seed-fallback mode | With Step 1–2 env (full mode) |
+| --- | --- | --- |
+| Browse catalogue, guides, sources | ✔ verified seed snapshot | ✔ live database |
+| Guest matching, plan generation | ✔ deterministic engines | ✔ |
+| Guest persistence (localStorage) | ✔ | ✔ |
+| Accounts, sign-in, shortlists, applications | ✖ typed 503 (honest) | ✔ |
+| Editorial review, admin, ingestion | ✖ typed 503 (honest) | ✔ |
+| Private document uploads | ✖ typed 503 (honest) | ✔ (needs Step 2) |
+
+Rules the fallback obeys: it triggers only on database *failure* (a
+reachable but empty database still returns an honest empty list), it
+serves read paths only, and `/api/health` reports
+`status: "degraded", catalogue: "seed-fallback"` with real serving
+counts so monitoring can tell the two modes apart. Guest demo flows are
+fully functional; write paths degrade honestly instead of faking success.
+
 ## Step 1 — Managed Postgres (Supabase recommended)
 
 1. Create a Supabase project (region close to your users, e.g. Singapore for
@@ -137,9 +180,13 @@ implicit local mode in production and answers a clear operational error.
 ## Step 7 — Post-deploy smoke checks
 
 ```bash
-curl -s https://<your-domain>/api/health          # expect 200 + counts
-curl -s https://<your-domain>/api/catalogue | head -c 200   # typed JSON
+curl -s https://<your-domain>/api/health          # 200; healthy (counts) or degraded/seed-fallback (counts)
+curl -s https://<your-domain>/api/catalogue | head -c 200   # typed JSON, 11 opportunities either way
 ```
+
+A `degraded` health status means Step 1 (Postgres) is not wired yet: the
+public site still serves the verified seed catalogue, and account/admin
+flows answer typed 503s. Complete Step 1 to move to `healthy`.
 
 Then run the browser walkthrough in `docs/PRESENTATION.md` on the public
 URL (register → merge → plan → task completion → reload → Bangla → 360px).

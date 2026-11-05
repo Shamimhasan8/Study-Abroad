@@ -72,6 +72,12 @@ storage, cron-secret ingestion, admin provisioning, post-deploy smoke
 checks). The dev environment's SQLite/file-storage defaults are refused in
 production with actionable errors — they never silently degrade.
 
+Deploying to Vercel with **no configuration** also works out of the box:
+the build is host-agnostic and the public catalogue serves the committed
+verified seeds in a clearly flagged read-only mode (`/api/health` →
+`catalogue: "seed-fallback"`) — ideal for previews and demos; wire Step 1
+of the deployment guide for full account/admin functionality.
+
 Lint: `bun run lint` · Typecheck: `bunx tsc --noEmit`.
 
 ### The first registered user becomes admin
