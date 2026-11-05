@@ -193,7 +193,6 @@ export function WritingTab() {
     // `t` is intentionally absent: the load must not re-run on a language
     // switch — re-running reset the editor to server content and discarded
     // unsaved keystrokes. The toast title stays current via errorTitleRef.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, toast]);
 
   // Unmount: flush the pending autosave instead of dropping it. Switching
