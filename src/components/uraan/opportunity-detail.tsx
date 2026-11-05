@@ -197,6 +197,7 @@ export function OpportunityDetailView() {
           <Button
             variant={shortlist.includes(opportunity.slug) ? "secondary" : "outline"}
             onClick={() => onToggleShortlist(opportunity.slug)}
+            aria-pressed={shortlist.includes(opportunity.slug)}
             className="gap-1.5"
           >
             <Bookmark className={cn("h-4 w-4", shortlist.includes(opportunity.slug) && "fill-current")} aria-hidden="true" />
@@ -205,6 +206,7 @@ export function OpportunityDetailView() {
           <Button
             variant={goalSlug === opportunity.slug ? "secondary" : "outline"}
             onClick={() => setGoal(opportunity.slug)}
+            aria-pressed={goalSlug === opportunity.slug}
             className="gap-1.5"
           >
             <Target className="h-4 w-4" aria-hidden="true" />

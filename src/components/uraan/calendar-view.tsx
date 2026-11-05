@@ -68,9 +68,14 @@ export function CalendarView() {
     }
     for (const app of applications) {
       if (app.status === "submitted" || app.status === "awaiting") {
+        // Submission date = the recorded 'submitted' event when present
+        // (newest first in both store and server), else updatedAt — the
+        // same basis the ICS export uses, so in-app and exported
+        // calendars agree on the day.
+        const submittedEvent = app.events.find((e) => e.type === "submitted");
         list.push({
           id: `app-${app.id}`,
-          date: app.updatedAt.slice(0, 10),
+          date: (submittedEvent?.createdAt ?? app.updatedAt).slice(0, 10),
           title: app.opportunityTitle,
           kind: "application",
           official: false,

@@ -18,7 +18,10 @@ export async function GET() {
     where: { userId: user.id, status: "active" },
     include: { plans: { where: { isActive: true }, include: { tasks: true }, take: 1 } },
   });
-  const applications = await db.application.findMany({ where: { userId: user.id } });
+  const applications = await db.application.findMany({
+    where: { userId: user.id },
+    include: { events: { orderBy: { createdAt: "desc" } } },
+  });
 
   const events: IcsEvent[] = [];
 
@@ -51,10 +54,16 @@ export async function GET() {
     }
   }
 
+  // Application milestones — mirrors the in-app calendar: only submitted /
+  // awaiting applications appear, dated by the recorded 'submitted' event
+  // (newest first) with updatedAt as fallback, so the export and the app
+  // never show the same logical milestone on different days.
   for (const app of applications) {
+    if (app.status !== "submitted" && app.status !== "awaiting") continue;
+    const submittedEvent = app.events.find((e) => e.type === "submitted");
     events.push({
       uid: `app-${app.id}`,
-      date: app.createdAt.toISOString().slice(0, 10),
+      date: (submittedEvent?.createdAt ?? app.updatedAt).toISOString().slice(0, 10),
       summary: `[Application] ${app.opportunityTitle} — ${app.status}`,
       description: "Self-reported application record.",
     });

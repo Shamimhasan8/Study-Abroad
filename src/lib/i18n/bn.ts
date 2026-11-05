@@ -340,6 +340,7 @@ export const bn: Record<TranslationKey, string> = {
   "exp.noPadding": "আবেদন মোটা করতে সার্টিফিকেট জমানো নয় — ব্যাজের চেয়ে গভীরতা।",
 
   "write.title": "লেখার ওয়ার্কস্পেস",
+  "write.draftsList": "আপনার ড্রাফটগুলো",
   "write.subtitle": "রচনা ও স্টেটমেন্ট আপনারই থাকে। উড়ান ফিডব্যাক দেয় আপনার নিজের তথ্যের ভিত্তিতে।",
   "write.newDraft": "নতুন ড্রাফট",
   "write.kind": "ধরন",

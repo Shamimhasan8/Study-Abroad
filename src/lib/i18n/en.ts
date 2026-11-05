@@ -353,6 +353,7 @@ export const en = {
 
   // Writing
   "write.title": "Writing workspace",
+  "write.draftsList": "Your drafts",
   "write.subtitle": "Essays and statements remain yours. Uraan gives feedback grounded in your own facts.",
   "write.newDraft": "New draft",
   "write.kind": "Type",

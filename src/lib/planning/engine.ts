@@ -75,7 +75,10 @@ function intakeDateOf(profile: ProfileData, fallbackMonths = 18): { date: Date; 
   if (profile.targetIntakeYear) {
     // Rough planning window only: labelled assumed because programme start
     // months vary by institution; official dates come from the source page.
-    const month = profile.targetIntakeTerm === "spring" ? 4 : 9;
+    // Spring = April (month index 3), matching the published onboarding
+    // label "Spring (April)" — previously this used May, disagreeing with
+    // the UI by a month. Fall stays September.
+    const month = profile.targetIntakeTerm === "spring" ? 3 : 9;
     const date = new Date(profile.targetIntakeYear, month, 1);
     if (monthsBetween(today, date) >= 0) return { date, assumed: true };
     // intake already passed without a year bump → fall through to fallback

@@ -458,7 +458,7 @@ export function WritingTab() {
             {drafts !== null && drafts.length > 0 && (
               <ul
                 className="uraan-scroll flex max-h-96 flex-wrap gap-2 overflow-y-auto pr-1"
-                aria-label={t("write.versions")}
+                aria-label={t("write.draftsList")}
               >
                 {drafts.map((draft) => (
                   <li key={draft.id}>

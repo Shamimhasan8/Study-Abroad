@@ -134,18 +134,32 @@ function useUrlRouting() {
 
   // Store → URL: every navigation pushes a history entry (back/forward work).
   // The very first sync REPLACES (no extra history entry on a fresh load).
+  // Typing in the Explore search box changes ONLY the query — pushing a
+  // history entry per keystroke made Back replay the search one character
+  // at a time, so query-only changes replace the current entry instead.
+  const prevNavRef = useRef({ view, detailSlug, prepareTab, compareSlugs, exploreFilters });
   useEffect(() => {
+    const prev = prevNavRef.current;
+    prevNavRef.current = { view, detailSlug, prepareTab, compareSlugs, exploreFilters };
     if (applying.current) return;
     const next = urlOf({ view, detailSlug, prepareTab, compareSlugs, exploreFilters });
     if (next !== window.location.pathname + window.location.search) {
-      if (firstSync.current) {
+      const navChanged =
+        view !== prev.view ||
+        detailSlug !== prev.detailSlug ||
+        prepareTab !== prev.prepareTab ||
+        compareSlugs !== prev.compareSlugs ||
+        exploreFilters.country !== prev.exploreFilters.country ||
+        exploreFilters.level !== prev.exploreFilters.level ||
+        exploreFilters.cycle !== prev.exploreFilters.cycle;
+      const onlyQueryChanged = !navChanged && exploreFilters.query !== prev.exploreFilters.query;
+      if (firstSync.current || onlyQueryChanged) {
         window.history.replaceState({}, "", next);
       } else {
         window.history.pushState({}, "", next);
       }
     }
     firstSync.current = false;
-     
   }, [view, detailSlug, prepareTab, compareSlugs, exploreFilters]);
 
   // URL ← browser: back/forward buttons re-apply the URL state to the store.
