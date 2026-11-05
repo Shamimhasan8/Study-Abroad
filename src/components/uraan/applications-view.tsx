@@ -42,7 +42,7 @@ export function ApplicationsView() {
     status === "submitted" ? "apps.status.submitted" :
     status === "awaiting" ? "apps.status.awaiting" : "apps.status.closed";
 
-  const syncAdd = async (app: { opportunitySlug: string; opportunityTitle: string; intendedIntake?: string; notes?: string }) => {
+  const syncAdd = async (pendingId: string, app: { opportunitySlug: string; opportunityTitle: string; intendedIntake?: string; notes?: string }) => {
     if (!user) return; // guests persist via store only
     try {
       const res = await fetch("/api/applications", {
@@ -50,32 +50,61 @@ export function ApplicationsView() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...app, status: "draft" }),
       });
-      const json = await res.json();
-      if (json.ok) upsertApplication(json.data.application as ApplicationRecord);
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.ok) {
+        // Replace the optimistic pending row with the durable server record
+        // (they carry different ids): leaving both in the store created a
+        // permanent duplicate card that diverged from the server.
+        useAppStore.getState().removeApplication(pendingId);
+        upsertApplication(json.data.application as ApplicationRecord);
+        return;
+      }
+      // Failure: roll the optimistic row back — a phantom record that
+      // silently vanishes on the next reload is never honest UI.
+      useAppStore.getState().removeApplication(pendingId);
+      toast({
+        title: json?.error === "already_tracked" ? t("apps.alreadyTracked") : t("apps.addFailed"),
+        variant: "destructive",
+      });
     } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
+      useAppStore.getState().removeApplication(pendingId);
+      toast({ title: t("apps.addFailed"), variant: "destructive" });
     }
   };
 
   const syncStatus = async (id: string, status: ApplicationStatus) => {
     if (!user) return;
+    // Rows still awaiting their server id cannot be patched — the POST that
+    // creates the server record resolves the row to a real id first.
+    if (id.startsWith("pending-")) return;
     try {
-      await fetch("/api/applications", {
+      const res = await fetch("/api/applications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
       });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        // The optimistic local change stays (user intent is preserved) but
+        // the user must know it did not persist to their account.
+        toast({ title: t("apps.statusSyncFailed"), variant: "destructive" });
+      }
     } catch {
-      /* keep optimistic local state */
+      toast({ title: t("apps.statusSyncFailed"), variant: "destructive" });
     }
   };
 
   const syncDelete = async (id: string) => {
     if (!user) return;
+    if (id.startsWith("pending-")) return; // never reached the server
     try {
-      await fetch(`/api/applications?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/applications?id=${id}`, { method: "DELETE" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        toast({ title: t("apps.deleteSyncFailed"), variant: "destructive" });
+      }
     } catch {
-      /* ignore */
+      toast({ title: t("apps.deleteSyncFailed"), variant: "destructive" });
     }
   };
 
@@ -83,7 +112,7 @@ export function ApplicationsView() {
     if (!slug.trim() || !title.trim()) return;
     // Dedupe guard: never track the same opportunity twice.
     if (applications.some((a) => a.opportunitySlug === slug.trim())) {
-      toast({ title: lang === "bn" ? "এই সুযোগটি আগেই ট্র্যাক করা আছে" : "This opportunity is already tracked" });
+      toast({ title: t("apps.alreadyTracked") });
       setDialogOpen(false);
       return;
     }
@@ -94,8 +123,9 @@ export function ApplicationsView() {
       notes: notes || undefined,
     };
     const now = new Date().toISOString();
+    const pendingId = user ? `pending-${Date.now()}` : `local-${Date.now()}`;
     upsertApplication({
-      id: user ? `pending-${Date.now()}` : `local-${Date.now()}`,
+      id: pendingId,
       status: "draft",
       events: [{ id: `e-${Date.now()}`, type: "created", createdAt: now }],
       createdAt: now,
@@ -104,7 +134,7 @@ export function ApplicationsView() {
     });
     setDialogOpen(false);
     setSlug(""); setTitle(""); setIntake(""); setNotes("");
-    void syncAdd(app);
+    void syncAdd(pendingId, app);
   };
 
   const changeStatus = (id: string, status: ApplicationStatus) => {
