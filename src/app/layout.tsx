@@ -1,31 +1,44 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
+/**
+ * Fonts are SELF-HOSTED (next/font/local): next/font/google fetches font
+ * files from Google's servers at BUILD time, so any deploy host with
+ * blocked or flaky network access to fonts.googleapis.com fails the build
+ * with 'NextFontGoogleFontFileReplacer ... module not found' — reproduced
+ * as an intermittent deploy breaker. The woff2 files below are the exact
+ * subsets previously served (latin for Geist/Geist Mono/Fraunces,
+ * bengali for Noto Sans Bengali), vendored into the repository.
+ */
+const geistSans = localFont({
+  src: "./fonts/Geist-Variable.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/GeistMono-Variable.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
+  display: "swap",
 });
 
 /** Editorial display face for English headings (soft-serif, warm, distinctive). */
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: "./fonts/Fraunces-Variable.woff2",
   variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: "400 900",
   display: "swap",
 });
 
 /** Real Bengali typeface with proper line metrics for the Bangla interface. */
-const notoBengali = Noto_Sans_Bengali({
+const notoBengali = localFont({
+  src: "./fonts/NotoSansBengali-Variable.woff2",
   variable: "--font-noto-bengali",
-  subsets: ["bengali"],
-  weight: ["400", "500", "600", "700"],
+  weight: "100 900",
   display: "swap",
 });
 
