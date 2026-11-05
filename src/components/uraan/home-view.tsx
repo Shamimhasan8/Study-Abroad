@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { HeroVisual } from "./hero-visual";
 import { HomeDemo } from "./home-demo";
 import { HomeOpportunities } from "./home-opportunities";
+import { HomeFunding } from "./home-funding";
+import { HomeMentor } from "./home-mentor";
 import {
   StudentReading,
   BookStack,
@@ -292,6 +294,12 @@ export function HomeView() {
 
       {/* ===================== Supported opportunities (live) ===================== */}
       <HomeOpportunities />
+
+      {/* ===================== Funding explainer ===================== */}
+      <HomeFunding />
+
+      {/* ===================== Mentor preview ===================== */}
+      <HomeMentor />
 
       {/* ===================== How it works ===================== */}
       <motion.section

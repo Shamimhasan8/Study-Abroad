@@ -172,6 +172,27 @@ export const en = {
   "home.oppEmpty": "No published opportunities right now — check back soon.",
   "home.oppLevel.master_phd": "Master's / PhD",
 
+  // Home — funding explainer + mentor preview
+  "home.fundTitle": "Funding, told honestly",
+  "home.fundLabel": "How the worksheet separates what recurs from what is due first",
+  "home.fundAnnualTitle": "Costs that recur every year",
+  "home.fundAnnualBody": "Tuition, living costs, and insurance as published by the programme — kept in their original currency, converted only with a planning rate you set.",
+  "home.fundUpfrontTitle": "Cash needed before enrollment",
+  "home.fundUpfrontBody": "Deposits, visas, travel, and the first weeks of living — money that must exist before a future stipend can ever help.",
+  "home.fundRule1": "Unknown costs are never treated as zero.",
+  "home.fundRule2": "Competitive awards stay separate from guaranteed funds.",
+  "home.fundRule3": "A future stipend cannot pay today's deposit.",
+  "home.fundCta": "Open the funding worksheet",
+  "home.mentorTitle": "A mentor that cites its sources",
+  "home.mentorAvailable": "Live mentor — answers grounded in reviewed facts",
+  "home.mentorFallback": "Template mode — clearly labelled answers while the live model is unavailable",
+  "home.mentorExampleQ": "Explain this requirement in plain language",
+  "home.mentorExampleA": "MIT reviews international applications need-blind — your family's finances never affect the admission decision. Aid is then calculated from documented finances, so start gathering those documents early: the aid form is due with the application itself.",
+  "home.mentorCite": "Grounded in: MIT Admissions aid pages · verified 2026-11-04",
+  "home.mentorNote": "Example answer shape — real answers cite the facts in your plan",
+  "home.mentorCta": "Meet the mentor in your workspace",
+  "home.mentorActions": "Explain a requirement · help me start a task · review my next week · preview a change",
+
   // Onboarding
   "onboarding.title": "Let's build your plan",
   "onboarding.subtitle": "A few questions at a time. Nothing is required unless it changes your plan.",
