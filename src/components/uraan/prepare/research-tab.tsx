@@ -60,6 +60,14 @@ export function ResearchTab() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const loadedRef = useRef(false);
+  /** Latest saveNow — lets the unmount cleanup flush a pending autosave. */
+  const saveNowRef = useRef<(next: NoteForm) => Promise<void>>(async () => {});
+  /** Error title in the CURRENT language — keeps the load effect off `t`
+   * deps so a language switch cannot re-run it and reset the form. */
+  const errorTitleRef = useRef(t("common.error"));
+  useEffect(() => {
+    errorTitleRef.current = t("common.error");
+  }, [t]);
 
   useEffect(() => {
     formRef.current = form;
@@ -94,17 +102,28 @@ export function ResearchTab() {
         if (cancelled) return;
         setForm(EMPTY_NOTE);
         setLoaded(true);
-        toast({ title: t("common.error"), variant: "destructive" });
+        toast({ title: errorTitleRef.current, variant: "destructive" });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [user, t, toast]);
+    // `t` is intentionally absent: the load must not re-run on a language
+    // switch — re-running reset the form and discarded unsaved input. The
+    // toast title stays current via errorTitleRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, toast]);
 
+  // Unmount: flush the pending autosave instead of dropping it. Switching
+  // prepare tabs (Radix unmounts inactive content) or leaving the view used
+  // to silently discard everything typed since the last debounce window.
   useEffect(
     () => () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        void saveNowRef.current(formRef.current);
+      }
     },
     [],
   );
@@ -135,6 +154,11 @@ export function ResearchTab() {
     },
     [user, t, toast],
   );
+
+  // Keep the unmount-flush ref pointing at the latest saveNow.
+  useEffect(() => {
+    saveNowRef.current = saveNow;
+  }, [saveNow]);
 
   /** Any form change: update state and re-arm the debounced autosave. */
   const update = (patch: Partial<NoteForm>) => {

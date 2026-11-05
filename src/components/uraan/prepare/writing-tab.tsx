@@ -142,6 +142,14 @@ export function WritingTab() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef<WritingDraft | null>(null);
   const editorRef = useRef("");
+  /** Latest saveNow — lets the unmount cleanup flush a pending autosave. */
+  const saveNowRef = useRef<(content: string) => Promise<void>>(async () => {});
+  /** Error title in the CURRENT language — keeps the load effect off `t`
+   * deps so a language switch cannot re-run it and reset the editor. */
+  const errorTitleRef = useRef(t("common.error"));
+  useEffect(() => {
+    errorTitleRef.current = t("common.error");
+  }, [t]);
 
   const active = useMemo(
     () => (drafts ?? []).find((d) => d.id === activeId) ?? null,
@@ -176,18 +184,29 @@ export function WritingTab() {
       } catch {
         if (cancelled) return;
         setDrafts([]);
-        toast({ title: t("common.error"), variant: "destructive" });
+        toast({ title: errorTitleRef.current, variant: "destructive" });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [user, t, toast]);
+    // `t` is intentionally absent: the load must not re-run on a language
+    // switch — re-running reset the editor to server content and discarded
+    // unsaved keystrokes. The toast title stays current via errorTitleRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, toast]);
 
-  // Clear the debounce timer on unmount — no state updates after teardown.
+  // Unmount: flush the pending autosave instead of dropping it. Switching
+  // prepare tabs (Radix unmounts inactive content) or leaving the view used
+  // to destroy the editor and silently discard everything typed since the
+  // last debounce window.
   useEffect(
     () => () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        void saveNowRef.current(editorRef.current);
+      }
     },
     [],
   );
@@ -220,6 +239,11 @@ export function WritingTab() {
     },
     [user, t, toast],
   );
+
+  // Keep the unmount-flush ref pointing at the latest saveNow.
+  useEffect(() => {
+    saveNowRef.current = saveNow;
+  }, [saveNow]);
 
   /** Debounced autosave — ~1.2s after the last keystroke. */
   const scheduleSave = useCallback(
