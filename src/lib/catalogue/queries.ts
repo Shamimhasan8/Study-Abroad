@@ -1,8 +1,20 @@
 /**
  * Catalogue queries — parse Prisma rows into typed domain objects and
  * provide search/filter used by the API and the guest experience.
+ *
+ * Serverless fallback: when the database is unreachable (no DATABASE_URL or
+ * no SQLite file, e.g. read-only serverless deployments), every READ falls
+ * back to the committed verified seeds (see ./fallback.ts) so the public
+ * catalogue keeps serving. Filters are applied through one shared pure
+ * function so the database path and the fallback path can never drift.
+ * Writes elsewhere in the app never fake success.
  */
 import { db } from "@/lib/db";
+import {
+  FALLBACK_GUIDES,
+  FALLBACK_OPPORTUNITIES,
+  type GuideSummary,
+} from "@/lib/catalogue/fallback";
 import type {
   CostItem,
   DeadlineEvent,
@@ -66,31 +78,36 @@ const LEVEL_INCLUSION: Record<string, string[]> = {
   master_phd: ["master_phd"],
 };
 
-export async function listOpportunities(filters?: {
+export interface OpportunityFilters {
   country?: string;
   level?: string;
   fundingType?: string;
   cycleStatus?: string;
   query?: string;
-}): Promise<Opportunity[]> {
-  const where: Record<string, unknown> = {};
-  if (filters?.country && filters.country !== "all") where.country = filters.country;
-  if (filters?.level && filters.level !== "all") {
-    const levels = LEVEL_INCLUSION[filters.level];
-    where.level = levels && levels.length === 1 ? levels[0] : { in: levels ?? [filters.level] };
+}
+
+/**
+ * Pure filter shared by the database path and the seed-fallback path so
+ * both always agree on semantics (inclusion levels, funding kind, search).
+ */
+function applyFilters(items: Opportunity[], filters?: OpportunityFilters): Opportunity[] {
+  let out = items;
+  if (filters?.country && filters.country !== "all") {
+    out = out.filter((o) => o.country === filters.country);
   }
-  if (filters?.cycleStatus && filters.cycleStatus !== "all") where.cycleStatus = filters.cycleStatus;
-  const rows = await db.opportunity.findMany({
-    where,
-    orderBy: [{ country: "asc" }, { title: "asc" }],
-  });
-  let items = rows.map(rowToOpportunity);
+  if (filters?.level && filters.level !== "all") {
+    const levels = LEVEL_INCLUSION[filters.level] ?? [filters.level];
+    out = out.filter((o) => levels.includes(o.level));
+  }
+  if (filters?.cycleStatus && filters.cycleStatus !== "all") {
+    out = out.filter((o) => o.cycleStatus === filters.cycleStatus);
+  }
   if (filters?.fundingType && filters.fundingType !== "all") {
-    items = items.filter((o) => o.funding.some((f) => f.kind === filters.fundingType));
+    out = out.filter((o) => o.funding.some((f) => f.kind === filters.fundingType));
   }
   if (filters?.query) {
     const q = filters.query.toLowerCase();
-    items = items.filter(
+    out = out.filter(
       (o) =>
         o.title.toLowerCase().includes(q) ||
         o.description.toLowerCase().includes(q) ||
@@ -98,35 +115,62 @@ export async function listOpportunities(filters?: {
         o.subjectAreas.some((s) => s.toLowerCase().includes(q)),
     );
   }
-  return items;
+  return out;
+}
+
+export async function listOpportunities(
+  filters?: OpportunityFilters,
+): Promise<Opportunity[]> {
+  try {
+    const rows = await db.opportunity.findMany({
+      orderBy: [{ country: "asc" }, { title: "asc" }],
+    });
+    return applyFilters(rows.map(rowToOpportunity), filters);
+  } catch {
+    // Database unreachable (e.g. serverless without DATABASE_URL): serve
+    // the committed verified seeds in read-only fallback mode.
+    return applyFilters(FALLBACK_OPPORTUNITIES, filters);
+  }
 }
 
 export async function getOpportunity(slug: string): Promise<Opportunity | null> {
-  const row = await db.opportunity.findUnique({ where: { slug } });
-  return row ? rowToOpportunity(row) : null;
+  try {
+    const row = await db.opportunity.findUnique({ where: { slug } });
+    return row ? rowToOpportunity(row) : null;
+  } catch {
+    return FALLBACK_OPPORTUNITIES.find((o) => o.slug === slug) ?? null;
+  }
 }
 
-export async function listCountryGuides() {
-  const rows = await db.countryGuide.findMany({ orderBy: { code: "asc" } });
-  return rows.map((row: NonNullable<GuideRow>) => ({
-    code: row.code,
-    nameEn: row.nameEn,
-    nameBn: row.nameBn,
-    contentEn: row.contentEn,
-    contentBn: row.contentBn,
-    sources: safeParse<SourceRef[]>(row.sourcesJson, []),
-  }));
+export async function listCountryGuides(): Promise<GuideSummary[]> {
+  try {
+    const rows = await db.countryGuide.findMany({ orderBy: { code: "asc" } });
+    return rows.map((row: NonNullable<GuideRow>) => ({
+      code: row.code,
+      nameEn: row.nameEn,
+      nameBn: row.nameBn,
+      contentEn: row.contentEn,
+      contentBn: row.contentBn,
+      sources: safeParse<SourceRef[]>(row.sourcesJson, []),
+    }));
+  } catch {
+    return FALLBACK_GUIDES;
+  }
 }
 
-export async function getCountryGuide(code: string) {
-  const row = await db.countryGuide.findUnique({ where: { code } });
-  if (!row) return null;
-  return {
-    code: row.code,
-    nameEn: row.nameEn,
-    nameBn: row.nameBn,
-    contentEn: row.contentEn,
-    contentBn: row.contentBn,
-    sources: safeParse<SourceRef[]>(row.sourcesJson, []),
-  };
+export async function getCountryGuide(code: string): Promise<GuideSummary | null> {
+  try {
+    const row = await db.countryGuide.findUnique({ where: { code } });
+    if (!row) return null;
+    return {
+      code: row.code,
+      nameEn: row.nameEn,
+      nameBn: row.nameBn,
+      contentEn: row.contentEn,
+      contentBn: row.contentBn,
+      sources: safeParse<SourceRef[]>(row.sourcesJson, []),
+    };
+  } catch {
+    return FALLBACK_GUIDES.find((g) => g.code === code) ?? null;
+  }
 }
