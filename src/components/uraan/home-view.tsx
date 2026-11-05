@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HeroVisual } from "./hero-visual";
+import { HomeDemo } from "./home-demo";
 import {
   StudentReading,
   BookStack,
@@ -285,46 +286,8 @@ export function HomeView() {
         </motion.div>
       </motion.section>
 
-      {/* ===================== Journey example (honest, labelled) ===================== */}
-      <motion.section
-        className="mt-14"
-        aria-labelledby="example-title"
-        variants={enter}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
-      >
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="example-title" className="font-display text-2xl font-semibold tracking-tight sm:text-[28px]">
-            {t("home.exampleTitle")}
-          </h2>
-          <p className="text-xs text-muted-foreground">{t("home.exampleLabel")}</p>
-        </div>
-        <Card className="mt-5 border-border bg-card">
-          <CardContent className="p-5 sm:p-6">
-            <ol className="grid gap-4 sm:grid-cols-3">
-              {[
-                { title: t("home.exampleStep1Title"), body: t("home.exampleStep1Body") },
-                { title: t("home.exampleStep2Title"), body: t("home.exampleStep2Body") },
-                { title: t("home.exampleStep3Title"), body: t("home.exampleStep3Body") },
-              ].map((step, n) => (
-                <li key={n} className="flex gap-3">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-bold text-leaf" aria-hidden="true">
-                    {n + 1}
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold leading-snug">{step.title}</p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-5 border-t border-border/70 pt-4 text-xs leading-relaxed text-muted-foreground">
-              {t("home.exampleNote")}
-            </p>
-          </CardContent>
-        </Card>
-      </motion.section>
+      {/* ===================== Requirement → task → evidence (interactive) ===================== */}
+      <HomeDemo />
 
       {/* ===================== How it works ===================== */}
       <motion.section
