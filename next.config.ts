@@ -5,6 +5,15 @@ const nextConfig: NextConfig = {
   // Real type gate: the build must fail on type errors (audited fix P1-4).
   // `tsc --noEmit` is also run in CI/verification; see docs/RELEASE_CHECKLIST.md.
   reactStrictMode: false,
+  // sharp is never used: the app renders no next/image components, so
+  // Next's image optimizer (sharp's only consumer) never runs. Exclude it
+  // and its @img/* native variants from standalone tracing — under pruned
+  // production installs (bun --production / npm --omit=dev), bun extracts
+  // the @img platform variants without README files and the standalone
+  // copy step crashed with ENOENT on exactly those files.
+  outputFileTracingExcludes: {
+    "*": ["node_modules/sharp/**", "node_modules/@img/**"],
+  },
   async headers() {
     return [
       {
