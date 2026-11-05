@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   // Real type gate: the build must fail on type errors (audited fix P1-4).
   // `tsc --noEmit` is also run in CI/verification; see docs/RELEASE_CHECKLIST.md.
   reactStrictMode: false,
+  typescript: {
+    // Build-only TS config: deploy hosts may prune devDependencies
+    // (vitest et al.), so test-only files (tests/, vitest.config.ts)
+    // must not be type-checked during `next build` — an undeclared
+    // import there used to fail the whole build on pruned installs.
+    // Local `tsc --noEmit` (tsconfig.json) still type-checks tests.
+    tsconfigPath: "./tsconfig.build.json",
+  },
   // sharp is never used: the app renders no next/image components, so
   // Next's image optimizer (sharp's only consumer) never runs. Exclude it
   // and its @img/* native variants from standalone tracing — under pruned
