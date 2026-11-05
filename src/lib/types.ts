@@ -436,6 +436,9 @@ export interface ServiceCapabilities {
   accountSync: { available: boolean };
   privateUploads: { available: boolean; storage: string };
   liveMentor: { available: boolean };
+  /** Official organizer sticker slot (public/badges/). `file` is the served
+   * filename when the asset exists, null while the slot is empty. */
+  competitionSticker: { available: boolean; file: string | null };
   probedAt: string;
 }
 

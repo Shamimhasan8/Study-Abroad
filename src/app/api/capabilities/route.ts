@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { db } from "@/lib/db";
 import { documentsBackend, saveDocument, readDocument, purgeDocument, newStorageKey } from "@/lib/documents/storage";
 import { complete } from "@/lib/ai/provider";
@@ -26,6 +28,7 @@ const CACHE_MS = 10 * 60 * 1000;
 let dbProbe: ProbeResult<{ reachable: boolean; mode: "database" | "seed-fallback" }> | null = null;
 let storageProbe: ProbeResult<{ available: boolean; backend: string }> | null = null;
 let mentorProbe: ProbeResult<{ available: boolean; error?: string }> | null = null;
+let stickerProbe: ProbeResult<{ available: boolean; file: string | null }> | null = null;
 
 async function probeDatabase() {
   if (dbProbe && Date.now() - dbProbe.at < CACHE_MS) return dbProbe.result;
@@ -80,11 +83,27 @@ async function probeMentor() {
   return mentorProbe.result;
 }
 
+/**
+ * Official organizer sticker slot (public/badges/). Probed with fs so the
+ * header never issues a doomed asset request: a missing sticker must not
+ * 404 on every page load. PNG is honoured alongside SVG.
+ */
+function probeSticker() {
+  if (stickerProbe && Date.now() - stickerProbe.at < CACHE_MS) return stickerProbe.result;
+  const dir = join(process.cwd(), "public", "badges");
+  const file = ["ai-ignite-2026.svg", "ai-ignite-2026.png"].find((name) =>
+    existsSync(join(dir, name)),
+  );
+  stickerProbe = { result: { available: file !== undefined, file: file ?? null }, at: Date.now() };
+  return stickerProbe.result;
+}
+
 export async function GET() {
-  const [database, storage, mentor] = await Promise.all([
+  const [database, storage, mentor, sticker] = await Promise.all([
     probeDatabase(),
     probeStorage(),
     probeMentor(),
+    Promise.resolve(probeSticker()),
   ]);
   return Response.json(
     {
@@ -94,6 +113,7 @@ export async function GET() {
         accountSync: { available: database.reachable },
         privateUploads: { available: storage.available, storage: storage.backend },
         liveMentor: { available: mentor.available },
+        competitionSticker: { available: sticker.available, file: sticker.file },
         probedAt: new Date().toISOString(),
       },
     },

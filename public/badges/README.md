@@ -18,10 +18,12 @@ replica of the sticker and not a compliance claim.
    (https://yunet-aignite26.devpost.com/) — use the organizer-provided
    asset, not a recreation.
 2. Save it as `ai-ignite-2026.svg` or `ai-ignite-2026.png` in this folder.
-3. If using PNG, update the two `src="/badges/ai-ignite-2026.svg"`
-   references in `src/components/uraan/header.tsx` to the PNG filename.
+   Both filenames are honoured automatically — no code change needed.
 
-The header probes the asset on load: when it exists, the official sticker
-renders automatically (height-constrained, alt-labeled); when it does not,
-the honest text badge remains. No code change or rebuild logic beyond the
-asset drop is required for the SVG path.
+The sticker's availability is probed **server-side** by
+`/api/capabilities` (an fs check on this directory, cached ~10 minutes)
+and flows to the header through the app store: when the asset exists,
+the official sticker renders automatically (height-constrained,
+alt-labeled); when it does not, the honest text badge remains. The
+header never requests a missing asset, so an empty slot produces no 404
+noise in server logs or the browser console.
