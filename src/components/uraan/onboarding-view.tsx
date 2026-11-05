@@ -499,8 +499,8 @@ function EducationStep({
               <Input
                 id={`qual-inst-${idx}`}
                 className="bg-card"
-                defaultValue={q.institution}
-                onBlur={(e) => update(idx, { institution: e.target.value })}
+                value={q.institution}
+                onChange={(e) => update(idx, { institution: e.target.value })}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -508,8 +508,8 @@ function EducationStep({
               <Input
                 id={`qual-scale-${idx}`}
                 className="bg-card"
-                defaultValue={q.scale}
-                onBlur={(e) => update(idx, { scale: e.target.value })}
+                value={q.scale}
+                onChange={(e) => update(idx, { scale: e.target.value })}
                 placeholder="GPA 5.00 / 100% / letter"
               />
             </div>
@@ -518,8 +518,8 @@ function EducationStep({
               <Input
                 id={`qual-grades-${idx}`}
                 className="bg-card"
-                defaultValue={q.grades}
-                onBlur={(e) => update(idx, { grades: e.target.value })}
+                value={q.grades}
+                onChange={(e) => update(idx, { grades: e.target.value })}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -527,8 +527,8 @@ function EducationStep({
               <Input
                 id={`qual-year-${idx}`}
                 className="bg-card"
-                defaultValue={q.year ?? ""}
-                onBlur={(e) => update(idx, { year: e.target.value || undefined })}
+                value={q.year ?? ""}
+                onChange={(e) => update(idx, { year: e.target.value || undefined })}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -538,8 +538,8 @@ function EducationStep({
                 type="number"
                 min={0}
                 className="bg-card"
-                defaultValue={q.gapMonths ?? ""}
-                onBlur={(e) => update(idx, { gapMonths: e.target.value ? Number(e.target.value) : undefined })}
+                value={q.gapMonths ?? ""}
+                onChange={(e) => update(idx, { gapMonths: e.target.value ? Number(e.target.value) : undefined })}
               />
             </div>
           </div>
@@ -651,8 +651,8 @@ function LanguageStep({
                 <Input
                   id={`test-type-${idx}`}
                   className="bg-card"
-                  defaultValue={test.testType}
-                  onBlur={(e) => updateTest(idx, { testType: e.target.value })}
+                  value={test.testType}
+                  onChange={(e) => updateTest(idx, { testType: e.target.value })}
                   placeholder="IELTS Academic"
                 />
               </div>
@@ -661,8 +661,8 @@ function LanguageStep({
                 <Input
                   id={`test-score-${idx}`}
                   className="bg-card"
-                  defaultValue={test.score}
-                  onBlur={(e) => updateTest(idx, { score: e.target.value })}
+                  value={test.score}
+                  onChange={(e) => updateTest(idx, { score: e.target.value })}
                   placeholder="7.0"
                 />
               </div>
