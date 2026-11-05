@@ -11,7 +11,12 @@
 export type DatePrecision = "date" | "month" | "window" | "unknown";
 
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar date, not UTC: for UTC+6 users (the primary audience)
+  // the UTC date is still "yesterday" between 00:00 and 06:00 local, which
+  // shifted overdue detection, round anchoring, and capacity math by a day.
+  // Matches the local-date convention used elsewhere in the app.
+  const now = new Date();
+  return isoOf(now);
 }
 
 export function parseISODate(value: string): Date | null {
@@ -88,12 +93,18 @@ export function buildICS(events: IcsEvent[], calendarName: string): string {
   ];
   for (const event of events) {
     const compact = event.date.replace(/-/g, "");
+    // RFC 5545: DTEND for VALUE:DATE is NON-INCLUSIVE. DTEND == DTSTART
+    // describes a zero-length event, which strict clients (Outlook, Apple
+    // Calendar) drop or render oddly. A one-day all-day event ends the next
+    // day; the date-only arithmetic below never crosses a timezone.
+    const parsed = parseISODate(event.date);
+    const endCompact = parsed ? isoOf(addDays(parsed, 1)).replace(/-/g, "") : compact;
     lines.push(
       "BEGIN:VEVENT",
       `UID:${event.uid}@uraan.app`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${compact}`,
-      `DTEND;VALUE=DATE:${compact}`,
+      `DTEND;VALUE=DATE:${endCompact}`,
       `SUMMARY:${icsEscape(event.summary)}`,
     );
     if (event.description) {
