@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { HeroVisual } from "./hero-visual";
 import { HomeDemo } from "./home-demo";
+import { HomeOpportunities } from "./home-opportunities";
 import {
   StudentReading,
   BookStack,
@@ -288,6 +289,9 @@ export function HomeView() {
 
       {/* ===================== Requirement → task → evidence (interactive) ===================== */}
       <HomeDemo />
+
+      {/* ===================== Supported opportunities (live) ===================== */}
+      <HomeOpportunities />
 
       {/* ===================== How it works ===================== */}
       <motion.section

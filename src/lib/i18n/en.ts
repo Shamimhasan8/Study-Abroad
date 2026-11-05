@@ -158,6 +158,20 @@ export const en = {
   "home.demoNext": "Next step",
   "home.demoTryCta": "Try it with my background",
 
+  // Home — live opportunities preview
+  "home.oppTitle": "Supported opportunities, with facts and unknowns",
+  "home.oppLabel": "Live from the verified catalogue",
+  "home.oppFunding": "Funding",
+  "home.oppDeadline": "Deadline",
+  "home.oppUnknownCosts": "Some costs unverified — kept as unknown, never guessed",
+  "home.oppViewDetails": "View details",
+  "home.oppBrowseAll": "Browse all {count} opportunities",
+  "home.oppLoading": "Loading current opportunities…",
+  "home.oppUnavailable": "Couldn't load the catalogue just now — retry in a moment.",
+  "home.oppRetry": "Retry",
+  "home.oppEmpty": "No published opportunities right now — check back soon.",
+  "home.oppLevel.master_phd": "Master's / PhD",
+
   // Onboarding
   "onboarding.title": "Let's build your plan",
   "onboarding.subtitle": "A few questions at a time. Nothing is required unless it changes your plan.",
