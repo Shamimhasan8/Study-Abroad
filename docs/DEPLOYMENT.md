@@ -46,26 +46,39 @@ then serves the public catalogue from the committed verified seeds
 
 ## Verification record — clean-room deploy audit (2026-11-05)
 
-A full clean-room audit was run to settle "there was a problem deploying
-the code" reports. Results, each reproduced from a bare checkout state
-(no `.env`, no `db/*.db`, no `DATABASE_URL` in the environment):
+A full clean-room audit was run to settle "Sorry, there was a problem
+deploying the code" reports. **The deploy failures were real code-side
+defects, found and fixed one by one** (each reproduced deterministically
+from a bare GitHub clone before fixing):
+
+| # | Root cause (reproduced) | Fix |
+| --- | --- | --- |
+| 1 | `@types/node` undeclared: on pruned installs (`--production` / `--omit=dev`) next build's type phase auto-runs `npm install @types/node` mid-build; that npm pass rewrites node_modules to npm's own resolution ("removed 9 packages"), deleting `@swc/helpers` and `@img/*` — then the standalone copier crashes `ENOENT` copying files npm just removed | declare `@types/node` as a real dependency |
+| 2 | Build-critical packages in devDependencies: pruned installs crash at `Cannot find module '@tailwindcss/postcss'` | move typescript, tailwindcss, @tailwindcss/postcss, tw-animate-css, @types/react(-dom) to dependencies |
+| 3 | Test-only files in the build type gate: pruned installs fail at `Cannot find module 'vitest/config'` | `tsconfig.build.json` (build excludes tests/ + vitest.config.ts; local `tsc --noEmit` still checks them) |
+| 4 | `next/font/google` fetches fonts at BUILD time: fresh checkouts with blocked/flaky Google access fail `NextFontGoogleFontFileReplacer ... module not found` (intermittent) | self-host the four woff2 subsets via `next/font/local` |
+| 5 | `sharp` (unused; arrives via next's optional deps): its @img natives crashed the standalone copy step | remove direct dep + exclude from output file tracing |
+| 6 | Start script required `bun` on the host; no `engines` declared | boot with plain `node`; declare `node >= 20.9.0` |
+
+Post-fix verification, each from a bare clone with **zero env/db** and a
+**pruned production install** (`bun install --production` and
+`npm install --omit=dev` both tested):
 
 | Check | Result |
 | --- | --- |
-| `next build` with zero env/db | ✔ exit 0 — compiled, 3/3 static pages |
-| Standalone boot (`npm start` / `bun run start`, node runtime) | ✔ homepage/health/static all 200 |
-| `next start` boot | ✔ works (logs a standalone-config warning, serves normally) |
+| Install → build → boot | ✔ exit 0; no npm auto-install runs; no Google network access |
+| Standalone completeness | ✔ `@swc/helpers` present and traced (server requires it at boot) |
+| Fonts | ✔ 4 woff2 served from `/_next/static/media` — self-hosted |
 | `/api/health`, `/api/catalogue`, `/api/state`, `/api/capabilities` with no database | ✔ 200 with `status: "degraded"`, `catalogue: "seed-fallback"` (11 opportunities / 27 sources from committed seeds) |
 | Write paths with no database (register) | ✔ honest typed 500 envelope `{"ok":false,"error":"server_error","retryable":true}` — no crash, no blank page |
-| `engines` / start script | ✔ `node >= 20.9.0` declared; standalone server boots with plain `node` (no Bun requirement on the host) |
+| `next start` boot | ✔ works (logs a standalone-config warning, serves normally) |
 
-**Conclusion:** the repository is deployable as-is on Vercel with zero
-configuration (public browsing via seed-fallback; accounts/uploads/mentor
-unlock with Steps 1–2 env). A "Sorry, there was a problem deploying the
-code — return to the generation page" message is a **deploy-platform-side
-failure** (generator UI, credentials, or quota), not a defect in this
-codebase: retrying the deploy, or importing the GitHub repo into Vercel
-directly, is the correct path.
+**Conclusion:** the repository now deploys with zero configuration on
+any standard Node host (public browsing via seed-fallback;
+accounts/uploads/mentor unlock with Steps 1–2 env). If a deploy still
+fails after these fixes, retry it — and check the platform's build log
+for the specific step, because the code-side failure modes above are
+all eliminated and re-verified from bare clones.
 
 ## Step 0 — Zero-config Vercel deployment (seed-fallback mode)
 
